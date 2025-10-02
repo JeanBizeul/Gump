@@ -37,7 +37,7 @@ C:\Dev\vcpkg\vcpkg install glfw3:x64-windows
 ### Clone the project
 
 ```powershell
-git clone --recurse-submodules <your-repo-url>
+git clone --recurse-submodules https://github.com/JeanBizeul/Gump.git
 cd Gump
 ```
 
@@ -97,13 +97,13 @@ sudo apt install build-essential cmake git
 #### 2. OpenGL development libraries
 
 ```bash
-sudo apt install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev
+sudo apt install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev libglfw3-dev
 ```
 
 ### Clone the project
 
 ```bash
-git clone --recurse-submodules <your-repo-url>
+git clone --recurse-submodules https://github.com/JeanBizeul/Gump.git
 cd Gump
 ```
 
