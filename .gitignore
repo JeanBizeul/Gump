@@ -1,5 +1,6 @@
 # Folders
 .vscode/
+.vs/
 build/
 
 # Files wildmatches
