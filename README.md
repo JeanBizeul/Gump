@@ -1,3 +1,5 @@
+The full documentation of this project is available online at https://jeanbizeul.github.io/Gump/.
+
 # Gump Setup Guide
 
 ## Windows Setup
