@@ -22,7 +22,7 @@ runchoice=${runchoice:-Y}  # default to Y if empty
 
 if [[ "$runchoice" =~ ^[Yy]$ ]]; then
     echo "Launching Gump..."
-    ./gump
+    ./Release/gump
 else
     echo "Skipping launch."
 fi
