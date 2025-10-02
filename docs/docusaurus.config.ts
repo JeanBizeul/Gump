@@ -80,7 +80,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/getting-started/welcome',
+              to: '/',
             },
             {
               label: 'Guides',
