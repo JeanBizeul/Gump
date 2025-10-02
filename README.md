@@ -32,6 +32,10 @@ Install GLFW3 via vcpkg:
 
 ```powershell
 C:\Dev\vcpkg\vcpkg install glfw3:x64-windows
+
+# Or you can use the provided dependencies-windows.txt
+
+Get-Content dependencies-windows.txt | ForEach-Object { C:/Dev/vcpkg/vcpkg.exe install $_ }
 ```
 
 ### Clone the project
@@ -91,7 +95,7 @@ The executable will be located in `build/Debug/gump.exe` or `build/Release/gump.
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake git
+xargs -a dependencies-linux.txt sudo apt install -y
 ```
 
 #### 2. OpenGL development libraries
