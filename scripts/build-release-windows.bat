@@ -8,6 +8,12 @@ REM Ensure build directory exists
 if not exist "build" mkdir "build"
 cd build
 
+REM Init & update git submodules
+echo Initating and updating git submodules
+git submodule init
+git submodule update
+echo Done
+
 REM Configure with vcpkg toolchain
 cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
 if %errorlevel% neq 0 exit /b %errorlevel%
