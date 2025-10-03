@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - dev
+      - main
+    paths-ignore:
+      - 'docs/**'
 
 jobs:
   build-and-test:
@@ -15,6 +18,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Initialize and update git submodules
+        run: |
+          git submodule init
+          git submodule update --recursive
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1
@@ -42,13 +50,13 @@ jobs:
         if: runner.os == 'Windows'
         run: Get-Content dependencies-windows.txt | ForEach-Object { C:/Dev/vcpkg/vcpkg.exe install $_ }
 
-      - name: Configure CMake
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
-          else
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-          fi
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         run: cmake --build build
