@@ -22,11 +22,11 @@ echo Build completed successfully.
 echo Program located at: %cd%\Release\gump.exe
 set /p runchoice="Do you want to run Gump directly ? [Y/n] "
 
-if /i "%runchoice%"=="Y" (
+if /i "%runchoice%"=="n" (
+    echo Skipping launch.
+) else (
     echo Launching Gump...
     ".\Release\gump.exe"
-) else (
-    echo Skipping launch.
 )
 
 endlocal

@@ -36,6 +36,11 @@ target_include_directories(imgui PUBLIC vendor/imgui vendor/imgui/backends)
 target_link_libraries(imgui PUBLIC glfw)
 
 # -----------------------------
+# GLM (header-only)
+# -----------------------------
+add_subdirectory(vendor/glm)
+
+# -----------------------------
 # Main executable
 # -----------------------------
 add_executable(gump src/main.cpp)
@@ -44,10 +49,10 @@ add_executable(gump src/main.cpp)
 target_sources(gump PRIVATE $<TARGET_OBJECTS:glad>)
 
 # Link the rest
-target_link_libraries(gump PRIVATE glfw imgui OpenGL::GL)
+target_link_libraries(gump PRIVATE glfw imgui OpenGL::GL glm-header-only)
 
 # -----------------------------
-# Optional: output directories
+# Output directories
 # -----------------------------
 set_target_properties(gump PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/Debug
