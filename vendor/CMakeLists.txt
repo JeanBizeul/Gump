@@ -22,3 +22,9 @@ target_link_libraries(imgui PUBLIC glfw)
 # GLM (header-only)
 # -----------------------------
 add_subdirectory(glm)
+
+# -----------------------------
+# STB (header-only)
+# -----------------------------
+add_library(stb-header-only INTERFACE)
+target_include_directories(stb-header-only INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/stb)
