@@ -16,29 +16,9 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
 # -----------------------------
-# GLAD (single C source)
+# Vendor libraries
 # -----------------------------
-add_library(glad OBJECT vendor/glad/src/glad.c)
-target_include_directories(glad PUBLIC vendor/glad/include)
-
-# -----------------------------
-# IMGUI (submodule)
-# -----------------------------
-add_library(imgui
-    vendor/imgui/imgui.cpp
-    vendor/imgui/imgui_draw.cpp
-    vendor/imgui/imgui_tables.cpp
-    vendor/imgui/imgui_widgets.cpp
-    vendor/imgui/backends/imgui_impl_glfw.cpp
-    vendor/imgui/backends/imgui_impl_opengl3.cpp
-)
-target_include_directories(imgui PUBLIC vendor/imgui vendor/imgui/backends)
-target_link_libraries(imgui PUBLIC glfw)
-
-# -----------------------------
-# GLM (header-only)
-# -----------------------------
-add_subdirectory(vendor/glm)
+add_subdirectory(vendor)
 
 # -----------------------------
 # Main executable
