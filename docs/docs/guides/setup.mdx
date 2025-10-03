@@ -53,13 +53,16 @@ cd Gump
 ### Build Steps
 
 :::info Build scripts
+
 You can use the script provided in scripts/ and do all of the build steps automatically
+
 ```powershell
 # Debug build
 ./scripts/build-debug-windows.bat
 # Release build
 ./scripts/build-release-windows.bat
 ```
+
 :::
 
 #### 1. Initialize and update git submodules (if not done while cloning the project)
@@ -81,7 +84,9 @@ cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```
 
-:::info If vcpkg is installed in a different location, adjust the path accordingly. :::
+::: info If vcpkg is installed in a different location, adjust the path accordingly.
+
+:::
 
 #### 4. Build the project
 
@@ -135,13 +140,16 @@ cd Gump
 ### Build Steps
 
 :::info Build scripts
+
 You can use the script provided in scripts/ and do all of the build steps automatically
+
 ```bash
 # Debug build
 ./scripts/build-debug-linux.sh
 # Release build
 ./scripts/build-release-linux.sh
 ```
+
 :::
 
 #### 1. Initialize and update git submodules (if not done while cloning the project)
@@ -179,6 +187,7 @@ The executable will be located in the `build/` directory:
 
 
 :::tip Build options
+
 Optionally, you can change `CMAKE_BUILD_TYPE` to `Release` for a release build:
 
 ```bash
@@ -186,6 +195,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 ./gump
  ```
+ 
 :::
 
 ### Notes for WSL
