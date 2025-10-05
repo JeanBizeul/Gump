@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <vector>
 
 #include "glm/gtc/type_ptr.hpp"
 #include "glad/glad.h"
@@ -64,12 +65,13 @@ OpenGLUtils::Shader::Shader(const std::string &vertexPath,
 
     glGetProgramiv(_shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
-        int logLenght;
+        int logLenght = 0;
         glGetProgramiv(_shaderProgram, GL_INFO_LOG_LENGTH, &logLenght);
-        char infoLog[logLenght];
-        glGetProgramInfoLog(_shaderProgram, logLenght, NULL, infoLog);
+
+        std::vector<char> infoLog(logLenght);
+        glGetProgramInfoLog(_shaderProgram, logLenght, NULL, infoLog.data());
         throw std::runtime_error("OpenGLUtils::Shader::Shader: Unable to compile the shaderProgram: "
-         + std::string(infoLog));
+         + std::string(infoLog.data()));
     }
     // We don't need the compiled shaders anymore (they takes space in memory)
     glDeleteShader(vertexShader);

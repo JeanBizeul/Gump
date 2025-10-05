@@ -10,7 +10,7 @@
 #define STBI_ONLY_PNG             // Only compiles the PNG module
 #include "stb/stb_image.h"
 
-#include "Logger.hpp"
+#include "Logger/Logger.hpp"
 
 static std::optional<OpenGLUtils::ImageData_t> loadImage(const std::string &path)
 {
@@ -33,16 +33,19 @@ static std::vector<std::pair<std::string, OpenGLUtils::ImageData_t>> loadImagesF
 {
     std::filesystem::recursive_directory_iterator it(path);
     std::vector<std::pair<std::string, OpenGLUtils::ImageData_t>> imgsData;
-    std::optional<OpenGLUtils::ImageData_t> temp;
-    std::string filename;
+
     unsigned int success = 0;
     unsigned int failure = 0;
 
     LOG_INFO("Loading all PNG files recursively from '{}'", path);
     for (auto &file : it) {
         if (file.is_regular_file()) {
-            temp = loadImage(file.path());
+            std::optional<OpenGLUtils::ImageData_t> temp;
+
+            temp = loadImage(file.path().string());
             if (temp != std::nullopt) {
+                std::string filename;
+
                 filename = file.path().stem().string();
                 imgsData.push_back({filename, temp.value()});
                 LOG_DEBUG("Loaded PNG rgba image '{}' from '{}'",

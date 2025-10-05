@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Logger.hpp"
+#include "Logger/Logger.hpp"
 
 int main() {
     Logs::Logger::getInstance().setMinimumLogLevel(Logs::LogLevel::Debug);
