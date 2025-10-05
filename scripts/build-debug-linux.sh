@@ -10,6 +10,11 @@ BUILD_DIR="$PROJECT_DIR/build"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
+# Init & update git submodules
+echo "Initating & updating git submodules"
+git submodule init
+git submodule update
+
 # Configure
 cmake "$PROJECT_DIR" -DCMAKE_BUILD_TYPE=Debug
 

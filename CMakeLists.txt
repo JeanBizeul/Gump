@@ -4,7 +4,8 @@ project(Gump LANGUAGES C CXX)
 # -----------------------------
 # C++ standard
 # -----------------------------
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # -----------------------------
@@ -16,38 +17,30 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
 # -----------------------------
-# GLAD (single C source)
+# Vendor libraries
 # -----------------------------
-add_library(glad OBJECT vendor/glad/src/glad.c)
-target_include_directories(glad PUBLIC vendor/glad/include)
-
-# -----------------------------
-# IMGUI (submodule)
-# -----------------------------
-add_library(imgui
-    vendor/imgui/imgui.cpp
-    vendor/imgui/imgui_draw.cpp
-    vendor/imgui/imgui_tables.cpp
-    vendor/imgui/imgui_widgets.cpp
-    vendor/imgui/backends/imgui_impl_glfw.cpp
-    vendor/imgui/backends/imgui_impl_opengl3.cpp
-)
-target_include_directories(imgui PUBLIC vendor/imgui vendor/imgui/backends)
-target_link_libraries(imgui PUBLIC glfw)
+add_subdirectory(vendor)
 
 # -----------------------------
 # Main executable
 # -----------------------------
-add_executable(gump src/main.cpp)
+file(GLOB SRC_FILES CONFIGURE_DEPENDS src/*.cpp src/*.c)
+add_executable(gump
+    # Add all source files in src/ using glob
+    ${SRC_FILES}
+)
+
+# Include src/ for main executable
+target_include_directories(gump PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/vendor)
 
 # Link GLAD as OBJECT library into the executable
 target_sources(gump PRIVATE $<TARGET_OBJECTS:glad>)
 
 # Link the rest
-target_link_libraries(gump PRIVATE glfw imgui OpenGL::GL)
+target_link_libraries(gump PRIVATE glfw imgui OpenGL::GL glm-header-only stb-header-only)
 
 # -----------------------------
-# Optional: output directories
+# Output directories
 # -----------------------------
 set_target_properties(gump PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/Debug
