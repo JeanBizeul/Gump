@@ -1,7 +1,6 @@
 #include "Mesh.hpp"
 
 #include "glad/glad.h"
-#include "Logger.hpp"
 
 OpenGLUtils::Mesh::Mesh(const std::vector<Vertex_t> &vertices,
     const std::vector<unsigned int> &indices)

@@ -33,7 +33,6 @@ static std::vector<std::pair<std::string, OpenGLUtils::ImageData_t>> loadImagesF
 {
     std::filesystem::recursive_directory_iterator it(path);
     std::vector<std::pair<std::string, OpenGLUtils::ImageData_t>> imgsData;
-
     unsigned int success = 0;
     unsigned int failure = 0;
 

@@ -2,8 +2,6 @@
 
 #include "glad/glad.h"
 
-#include "Logger.hpp"
-
 OpenGLUtils::VertexBuffer::VertexBuffer(const Vertex_t *data, size_t count)
 {
     glGenBuffers(1, &_id);
