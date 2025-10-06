@@ -1,6 +1,6 @@
 #include "Application.hpp"
 
-#include "Logger/Logger.hpp"
+#include "Logger.hpp"
 
 const size_t WindowWidth = 720;
 const size_t WindowHeight = 480;

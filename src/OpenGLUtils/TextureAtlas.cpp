@@ -10,7 +10,7 @@
 #define STBI_ONLY_PNG             // Only compiles the PNG module
 #include "stb/stb_image.h"
 
-#include "Logger/Logger.hpp"
+#include "Logger.hpp"
 
 static std::optional<OpenGLUtils::ImageData_t> loadImage(const std::string &path)
 {

@@ -5,25 +5,32 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 17)
 
+# --- Dependencies ---
 find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
+# --- Subdirectories ---
 add_subdirectory(vendor)
 add_subdirectory(src)
 
+# --- Application executable ---
 file(GLOB APP_FILES CONFIGURE_DEPENDS app/*.cpp app/*.c)
 add_executable(gump ${APP_FILES})
 
-target_include_directories(gump PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/vendor)
+target_include_directories(gump PRIVATE
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/vendor
+)
 
-target_link_libraries(gump PRIVATE 
-    glfw
-    imgui
-    OpenGL::GL
-    glad
-    opengl-utils
+# Link in correct dependency order
+target_link_libraries(gump PRIVATE
+    core            # Your main library
+    opengl-utils    # Depends on glad, imgui, etc.
     logger
-    core
+    imgui
+    glad
+    glfw
+    OpenGL::GL
 )
 
 set_target_properties(gump PROPERTIES

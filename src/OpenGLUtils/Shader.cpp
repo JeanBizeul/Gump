@@ -8,7 +8,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
-#include "Logger/Logger.hpp"
+#include "Logger.hpp"
 
 static std::string getShaderCode(const std::string &path)
 {

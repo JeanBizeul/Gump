@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "OpenGLUtils/Window.hpp"
+#include "Window.hpp"
 
 namespace Gump
 {
