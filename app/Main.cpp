@@ -14,5 +14,6 @@ int main() {
         LOG_FATAL("An error as occured while running the app: {}", e.what());
         return 84;
     }
+    LOG_DEBUG("Closing app");
     return 0;
 }

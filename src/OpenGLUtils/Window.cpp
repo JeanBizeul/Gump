@@ -25,12 +25,14 @@ OpenGLUtils::Window::Window(size_t width, size_t height, std::string name)
         throw std::runtime_error("Failed to create GLFW window");
     
     glfwMakeContextCurrent(_windowHandle);
-    glfwSwapInterval(1);
+    glfwSwapInterval(1); // vsync
 
     // Load all openGL functions
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         throw std::runtime_error("Failed to initialize GLAD");
     
+    glEnable(GL_DEPTH_TEST); // Used to sort out order of faces
+
     // Setup Dear ImGUI
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -64,7 +66,7 @@ void OpenGLUtils::Window::beginFrame()
     ImGui::NewFrame();
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void OpenGLUtils::Window::endFrame()

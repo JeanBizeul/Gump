@@ -62,7 +62,7 @@ OpenGLUtils::Shader::Shader(const std::string &vertexPath,
     glAttachShader(_shaderProgram, vertexShader);
     glAttachShader(_shaderProgram, fragmentShader);
     glLinkProgram(_shaderProgram);
-
+    
     glGetProgramiv(_shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
         int logLenght = 0;
@@ -76,8 +76,7 @@ OpenGLUtils::Shader::Shader(const std::string &vertexPath,
     // We don't need the compiled shaders anymore (they takes space in memory)
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-    // Logger::i().log("Loaded and linked " + vertexPath
-    //     + " + " + fragmentPath, "shader", Logger::INFO);
+    LOG_DEBUG("Loaded and linked {} + {} shader", vertexPath, fragmentPath);
 }
 
 OpenGLUtils::Shader::~Shader()
