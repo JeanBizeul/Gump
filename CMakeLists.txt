@@ -23,6 +23,7 @@ target_link_libraries(gump PRIVATE
     glad
     opengl-utils
     logger
+    core
 )
 
 set_target_properties(gump PROPERTIES

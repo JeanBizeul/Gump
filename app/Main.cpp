@@ -2,17 +2,17 @@
 #include <conio.h>
 
 #include "Logger/Logger.hpp"
-#include "OpenGLUtils/Window.hpp"
+#include "Core/Application.hpp"
 
 int main() {
     Logs::Logger::getInstance().setMinimumLogLevel(Logs::LogLevel::Debug);
 
     try {
-        LOG_DEBUG("Creating the window ...");
-        OpenGLUtils::Window window(720, 480, "Hello window !");
-        LOG_DEBUG("done");
+        Gump::Application app;
+
+        app.run();
     } catch (std::exception e) {
-        LOG_FATAL("Could not create the window: {}", e.what());
+        LOG_FATAL("An error as occured while running the app: {}", e.what());
         return 84;
     }
     return 0;
