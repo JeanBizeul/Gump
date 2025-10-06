@@ -2,12 +2,13 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <vector>
 
 #include "glm/gtc/type_ptr.hpp"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
-#include "Logger/Logger.hpp"
+#include "Logger.hpp"
 
 static std::string getShaderCode(const std::string &path)
 {
@@ -61,21 +62,21 @@ OpenGLUtils::Shader::Shader(const std::string &vertexPath,
     glAttachShader(_shaderProgram, vertexShader);
     glAttachShader(_shaderProgram, fragmentShader);
     glLinkProgram(_shaderProgram);
-
+    
     glGetProgramiv(_shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
-        int logLenght;
+        int logLenght = 0;
         glGetProgramiv(_shaderProgram, GL_INFO_LOG_LENGTH, &logLenght);
-        char infoLog[logLenght];
-        glGetProgramInfoLog(_shaderProgram, logLenght, NULL, infoLog);
+
+        std::vector<char> infoLog(logLenght);
+        glGetProgramInfoLog(_shaderProgram, logLenght, NULL, infoLog.data());
         throw std::runtime_error("OpenGLUtils::Shader::Shader: Unable to compile the shaderProgram: "
-         + std::string(infoLog));
+         + std::string(infoLog.data()));
     }
     // We don't need the compiled shaders anymore (they takes space in memory)
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
-    // Logger::i().log("Loaded and linked " + vertexPath
-    //     + " + " + fragmentPath, "shader", Logger::INFO);
+    LOG_DEBUG("Loaded and linked {} + {} shader", vertexPath, fragmentPath);
 }
 
 OpenGLUtils::Shader::~Shader()
