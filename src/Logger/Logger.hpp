@@ -8,6 +8,8 @@
 #include <source_location>
 #include <filesystem>
 
+#include "Formatters.hpp"
+
 #define LOG_DEBUG(format, ...) Logs::Logger::getInstance().log(Logs::LogLevel::Debug, std::source_location::current(), format, ##__VA_ARGS__)
 #define LOG_INFO(format, ...) Logs::Logger::getInstance().log(Logs::LogLevel::Info, std::source_location::current(), format, ##__VA_ARGS__)
 #define LOG_WARNING(format, ...) Logs::Logger::getInstance().log(Logs::LogLevel::Warning, std::source_location::current(), format, ##__VA_ARGS__)

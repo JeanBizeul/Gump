@@ -8,6 +8,8 @@ add_library(opengl-utils STATIC ${OPENGL_UTILS_SRC})
 target_include_directories(opengl-utils PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/OpenGLUtils
     ${PROJECT_SOURCE_DIR}/vendor
+    ${PROJECT_SOURCE_DIR}/vendor/imgui
+    ${PROJECT_SOURCE_DIR}/vendor/imgui/backends
     ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(opengl-utils 

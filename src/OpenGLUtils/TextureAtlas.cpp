@@ -49,7 +49,7 @@ static std::vector<std::pair<std::string, OpenGLUtils::ImageData_t>> loadImagesF
                 filename = file.path().stem().string();
                 imgsData.push_back({filename, temp.value()});
                 LOG_DEBUG("Loaded PNG rgba image '{}' from '{}'",
-                    filename, file.path().c_str());
+                    filename, file.path());
                 success++;
             } else
                 failure++;
