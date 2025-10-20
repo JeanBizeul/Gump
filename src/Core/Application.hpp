@@ -22,13 +22,12 @@ class Application
     std::unique_ptr<OpenGLUtils::Window> _window;
     bool _running = true;
 
-    std::unique_ptr<OpenGLUtils::Mesh> _demoCube;
-    std::unique_ptr<OpenGLUtils::Mesh> _demoLight;
-    std::unique_ptr<OpenGLUtils::Shader> _demoCubeShader;
-    std::unique_ptr<OpenGLUtils::Shader> _demoLightShader;
-
     void processInput();
     void update();
     void render();
 };
+
+namespace UI {
+   void renderTopMenu(Application &app);
+}
 }
