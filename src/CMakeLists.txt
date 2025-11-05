@@ -31,7 +31,7 @@ target_link_libraries(opengl-utils
 )
 
 # ---- Core ----
-file(GLOB CORE_SRC CONFIGURE_DEPENDS Core/*.cpp)
+file(GLOB_RECURSE CORE_SRC CONFIGURE_DEPENDS Core/*.cpp)
 add_library(core STATIC ${CORE_SRC})
 
 target_include_directories(core PUBLIC
