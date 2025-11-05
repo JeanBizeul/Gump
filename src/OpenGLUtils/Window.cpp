@@ -40,6 +40,11 @@ OpenGLUtils::Window::Window(size_t width, size_t height, std::string name)
 
     ImGui_ImplGlfw_InitForOpenGL(_windowHandle, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |=
+        ImGuiConfigFlags_DockingEnable
+        | ImGuiConfigFlags_ViewportsEnable;
 }
 
 OpenGLUtils::Window::~Window()
@@ -73,6 +78,14 @@ void OpenGLUtils::Window::endFrame()
 {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        GLFWwindow* backup_current_context = glfwGetCurrentContext();
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        glfwMakeContextCurrent(backup_current_context);
+    }
+
     glfwSwapBuffers(_windowHandle);
 }
 
