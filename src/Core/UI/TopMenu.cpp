@@ -1,3 +1,4 @@
+#include "UI/UI.hpp"
 #include "Application.hpp"
 
 #include <imgui.h>
@@ -20,7 +21,6 @@ void Gump::UI::renderTopMenu(Application &app)
             }
             ImGui::EndMenu();
         }
-        
         
         if (ImGui::BeginMenu("Edit")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z")) {

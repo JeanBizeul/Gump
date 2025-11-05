@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 
 #include <imgui.h>
@@ -26,8 +28,4 @@ class Application
     void update();
     void render();
 };
-
-namespace UI {
-   void renderTopMenu(Application &app);
-}
 }

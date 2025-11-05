@@ -6,6 +6,8 @@
 #include "Logger.hpp"
 #include "Vertex.hpp"
 
+#include "UI/UI.hpp"
+
 const size_t WindowWidth = 1080;
 const size_t WindowHeight = 720;
 const std::string_view WindowName = "Gump";
@@ -20,6 +22,9 @@ Gump::Application::Application()
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
     }
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void Gump::Application::run()
@@ -52,6 +57,6 @@ void Gump::Application::update()
 }
 
 void Gump::Application::render()
-{
-    Gump::UI::renderTopMenu(*this);
+{  
+    Gump::renderUI(*this);
 }
