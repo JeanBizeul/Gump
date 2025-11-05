@@ -14,6 +14,7 @@ void Gump::renderUI(Gump::Application &app)
         first = false;
     }
 
+    Gump::UI::renderTopMenu(app);
     Gump::UI::renderTools(app);
     Gump::UI::renderToolSettings(app);
     Gump::UI::renderBrushSettings(app);
