@@ -4,9 +4,9 @@
 #include <imgui/imgui_internal.h>
 
 void Gump::UI::renderBrushSettings(Gump::Application &app) {
-    ImGuiWindowClass windowClass;
-    windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
-    ImGui::SetNextWindowClass(&windowClass);
+    // ImGuiWindowClass windowClass;
+    // windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
+    // ImGui::SetNextWindowClass(&windowClass);
     ImGui::Begin("Brush Settings");
 
     ImGui::Text("Settings for brushes");

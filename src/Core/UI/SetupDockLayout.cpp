@@ -13,7 +13,7 @@ void Gump::UI::setupDockLayout(int dockspaceId)
 
     // Left dock
     ImGuiID dockIdLeft = 0;
-    ImGui::DockBuilderSplitNode(dockIdMain, ImGuiDir_Left, 0.20f, &dockIdLeft, &dockIdMain);
+    ImGui::DockBuilderSplitNode(dockIdMain, ImGuiDir_Left, 0.25f, &dockIdLeft, &dockIdMain);
 
     ImGuiID dockIdTopLeft = 0;
     ImGui::DockBuilderSplitNode(dockIdLeft, ImGuiDir_Up, 0.20f, &dockIdTopLeft, &dockIdLeft);
@@ -25,14 +25,14 @@ void Gump::UI::setupDockLayout(int dockspaceId)
 
     // Right dock
     ImGuiID dockIdRight = 0;
-    ImGui::DockBuilderSplitNode(dockIdMain, ImGuiDir_Right, 0.20f, &dockIdRight, &dockIdMain);
+    ImGui::DockBuilderSplitNode(dockIdMain, ImGuiDir_Right, 0.33f, &dockIdRight, &dockIdMain);
 
     ImGuiID dockIdTopRight = 0;
-    ImGui::DockBuilderSplitNode(dockIdRight, ImGuiDir_Up, 0.75f, &dockIdTopRight, &dockIdRight);
+    ImGui::DockBuilderSplitNode(dockIdRight, ImGuiDir_Up, 0.65f, &dockIdTopRight, &dockIdRight);
     ImGui::DockBuilderDockWindow("Brush Settings", dockIdTopRight);
 
     ImGuiID dockIdBottomRight = 0;
-    ImGui::DockBuilderSplitNode(dockIdRight, ImGuiDir_Down, 0.25f, &dockIdBottomRight, &dockIdRight);
+    ImGui::DockBuilderSplitNode(dockIdRight, ImGuiDir_Down, 0.35f, &dockIdBottomRight, &dockIdRight);
     ImGui::DockBuilderDockWindow("Layers", dockIdBottomRight);
 
     ImGui::DockBuilderFinish(dockspaceId);

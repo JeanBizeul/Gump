@@ -22,9 +22,6 @@ Gump::Application::Application()
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
     }
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void Gump::Application::run()
