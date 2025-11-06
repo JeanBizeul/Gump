@@ -6,6 +6,8 @@
 #include <ctime>
 #include <optional>
 
+#include "stb/stb_rect_pack.h"
+
 #include "glm/vec2.hpp"
 
 namespace OpenGLUtils
@@ -13,53 +15,68 @@ namespace OpenGLUtils
 
 struct UVEntry_t {
     int pageIndex;    // Index of the texture atlas page
-    glm::vec2 uvMin;  // Top left corner  (0.0f, 0.0f)
-    glm::vec2 uvMax;  // Top right corner (0.5f, 0.5f)
+    glm::vec2 uvMin;  // Top-left corner (0..1)
+    glm::vec2 uvMax;  // Bottom-right corner (0..1)
 };
 
 class TextureAtlas
 {
- public:
+public:
     struct ImageData_s {
         int width;
         int height;
         std::time_t lastModified;
-        std::vector<unsigned char> pixels;  // RGBA
+        std::vector<unsigned char> pixels; // RGBA
     };
 
-    TextureAtlas(const std::string &path);
+    explicit TextureAtlas(const std::string &path, int pageSize = 4096);
     TextureAtlas() = delete;
-
     TextureAtlas(const TextureAtlas &other) = delete;
     TextureAtlas &operator=(const TextureAtlas &other) = delete;
-
     ~TextureAtlas();
 
+    // Load all images from folder and create atlas pages
     void reloadTextures();
+
+    // Bind a specific page
     void bindPage(int pageIndex) const;
 
+    // Get UV for a given image name
     std::optional<UVEntry_t> getUVRect(const std::string &blockName) const;
 
+    // Total number of atlas pages
     int getPageCount() const;
- private:
-    std::unordered_map<std::string, TextureAtlas::ImageData_s> loadImagesFromFolder(const std::string &path);  
+
+    // Add one image dynamically
+    bool addImage(const std::string &name, const ImageData_s& img);
+
+private:
+    struct AtlasPage {
+        unsigned int textureId = 0;
+        std::vector<unsigned char> cpuPixels;
+        int width = 0;
+        int height = 0;
+
+        // stb_rect_pack context
+        stbrp_context* ctx = nullptr;
+        std::vector<struct stbrp_node> nodes;
+    };
+
+    std::unordered_map<std::string, ImageData_s> loadImagesFromFolder(const std::string &path);
     std::optional<ImageData_s> loadImage(const std::string &filePath);
 
     void packAllImages(const std::unordered_map<std::string, ImageData_s>& imgs);
-    void uploadPageToGPU(int pageIndex, const std::vector<unsigned char> &pixelData);
+    void createNewPage();
+    void writeImageToPage(AtlasPage& page, int x, int y, const ImageData_s& img);
+    void updateUV(const std::string &name, const ImageData_s &img, int pageIndex, int x, int y);
 
+private:
     std::string _texturesFolder;
-    
     const int _pageSize;
 
-    std::vector<unsigned int> _atlasPages;
-
-    std::vector<int> _pageWidthUsed;
-    std::vector<int> _pageHeightUsed;
-
+    std::vector<AtlasPage> _pages;
     std::unordered_map<std::string, UVEntry_t> _uvMap;
-
     std::unordered_map<std::string, ImageData_s> _imageDataCache;
 };
 
-}  // namespace OpenGLUtils
+} // namespace OpenGLUtils

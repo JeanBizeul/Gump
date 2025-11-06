@@ -8,6 +8,7 @@
 
 #include "Mesh.hpp"
 #include "Shader.hpp"
+#include "TextureAtlas.hpp"
 
 namespace Gump
 {

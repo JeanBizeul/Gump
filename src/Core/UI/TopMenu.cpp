@@ -1,7 +1,10 @@
 #include "UI/UI.hpp"
-#include "Application.hpp"
 
 #include <imgui.h>
+
+#include "Application.hpp"
+
+#include "Logger.hpp"
 
 void Gump::UI::renderTopMenu(Application &app)
 {
@@ -15,6 +18,9 @@ void Gump::UI::renderTopMenu(Application &app)
             }
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
                 // Handle save
+            }
+            if (ImGui::MenuItem("Export", "Ctrl+E")) {
+                // Handle export
             }
             if (ImGui::MenuItem("Exit")) {
                 app.stop();
@@ -41,6 +47,18 @@ void Gump::UI::renderTopMenu(Application &app)
             if (ImGui::MenuItem("Paste", "Ctrl+V")) {
 
             }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Image")) {
+            if (ImGui::MenuItem("Import", "Ctrl+I")) {
+                const std::wstring filepath = Gump::UI::openFilePickerDialog("Import Image", "*.*");
+
+                if (!filepath.empty()) {
+                    LOG_INFO("Import image: {}", filepath);
+                }
+            }
+
             ImGui::EndMenu();
         }
 
