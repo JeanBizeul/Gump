@@ -6,6 +6,8 @@
 
 #include "Window.hpp"
 
+#include "Canva.hpp"
+
 #include "Mesh.hpp"
 #include "Shader.hpp"
 #include "TextureAtlas.hpp"
@@ -28,6 +30,7 @@ class Application
     bool _running = true;
 
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
+    std::unique_ptr<Canva> _canva;
 
     void processInput();
     void update();

@@ -18,6 +18,8 @@ Gump::Application::Application()
     try {
         LOG_DEBUG("Creating window ...");
         _window = std::make_unique<OpenGLUtils::Window>(WindowWidth, WindowHeight, std::string(WindowName));
+        LOG_DEBUG("Creating canva ...");
+        _canva = std::make_unique<Canva>();
         LOG_DEBUG("Loading assets ...");
         _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>(TexturesFolderPath);
     } catch (std::exception e) {
@@ -57,10 +59,11 @@ void Gump::Application::processInput()
 
 void Gump::Application::update()
 {
-    
+    _canva->manageInputs();
 }
 
 void Gump::Application::render()
 {  
     Gump::renderUI(*this);
+    _canva->draw();
 }
