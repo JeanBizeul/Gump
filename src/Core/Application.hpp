@@ -21,9 +21,13 @@ class Application
     void run();
     void stop();
 
+    OpenGLUtils::TextureAtlas &getTextureAtlas();
+
  private:
     std::unique_ptr<OpenGLUtils::Window> _window;
     bool _running = true;
+
+    std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
 
     void processInput();
     void update();

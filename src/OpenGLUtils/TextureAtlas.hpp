@@ -29,7 +29,7 @@ public:
         std::vector<unsigned char> pixels; // RGBA
     };
 
-    explicit TextureAtlas(const std::string &path, int pageSize = 4096);
+    explicit TextureAtlas(const std::string &path);
     TextureAtlas() = delete;
     TextureAtlas(const TextureAtlas &other) = delete;
     TextureAtlas &operator=(const TextureAtlas &other) = delete;
@@ -48,7 +48,8 @@ public:
     int getPageCount() const;
 
     // Add one image dynamically
-    bool addImage(const std::string &name, const ImageData_s& img);
+    bool addImageFromFile(const std::string &filePath);
+    bool addImageFromFile(const std::wstring &filePath);
 
 private:
     struct AtlasPage {
@@ -65,6 +66,7 @@ private:
     std::unordered_map<std::string, ImageData_s> loadImagesFromFolder(const std::string &path);
     std::optional<ImageData_s> loadImage(const std::string &filePath);
 
+    bool addImage(const std::string &name, const ImageData_s& img);
     void packAllImages(const std::unordered_map<std::string, ImageData_s>& imgs);
     void createNewPage();
     void writeImageToPage(AtlasPage& page, int x, int y, const ImageData_s& img);

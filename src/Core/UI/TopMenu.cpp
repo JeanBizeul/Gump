@@ -6,6 +6,13 @@
 
 #include "Logger.hpp"
 
+inline static std::string wstringToString(const std::wstring& wstr) {
+    if (wstr.empty()) return {};
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.to_bytes(wstr);
+}
+
+
 void Gump::UI::renderTopMenu(Application &app)
 {
     if (ImGui::BeginMainMenuBar()) {
@@ -56,6 +63,12 @@ void Gump::UI::renderTopMenu(Application &app)
 
                 if (!filepath.empty()) {
                     LOG_INFO("Import image: {}", filepath);
+                    if (app.getTextureAtlas().addImageFromFile(filepath)) {
+                        LOG_INFO("Image imported successfully");
+                    } else {
+                        LOG_ERROR("Failed to import image");
+                    }
+                    LOG_DEBUG("Current texture atlas page count: {}", app.getTextureAtlas().getPageCount());
                 }
             }
 

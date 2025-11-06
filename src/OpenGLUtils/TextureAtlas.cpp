@@ -17,8 +17,15 @@
 
 using namespace OpenGLUtils;
 
-TextureAtlas::TextureAtlas(const std::string &path, int pageSize)
-    : _texturesFolder(path), _pageSize(pageSize)
+static int getMaxTextureSize()
+{
+    GLint size = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size);
+    return static_cast<int>(size > 0 ? size : 0);
+}
+
+TextureAtlas::TextureAtlas(const std::string &path)
+    : _texturesFolder(path), _pageSize(getMaxTextureSize())
 {
     reloadTextures();
 }
@@ -35,6 +42,9 @@ TextureAtlas::~TextureAtlas()
 
 int TextureAtlas::getPageCount() const
 {
+    LOG_DEBUG("TextureAtlas has {} pages", _pages.size());
+    LOG_DEBUG("Each page size: {}x{}", _pageSize, _pageSize);
+    LOG_DEBUG("Total textures in atlas: {}", _uvMap.size());
     return static_cast<int>(_pages.size());
 }
 
@@ -52,6 +62,7 @@ TextureAtlas::loadImagesFromFolder(const std::string &path)
 {
     std::unordered_map<std::string, ImageData_s> result;
 
+    LOG_INFO("Loading images recursively from folder: {}", path);
     for (auto &file : std::filesystem::recursive_directory_iterator(path))
     {
         if (!file.is_regular_file()) continue;
@@ -64,6 +75,8 @@ TextureAtlas::loadImagesFromFolder(const std::string &path)
         result[name] = *imgOpt;
         _imageDataCache[file.path().string()] = *imgOpt;
     }
+
+    LOG_INFO("Successfully loaded {} images from folder", result.size());
 
     return result;
 }
@@ -94,8 +107,60 @@ std::optional<TextureAtlas::ImageData_s> TextureAtlas::loadImage(const std::stri
     stbi_image_free(data);
 
     _imageDataCache[filePath] = imgData;
+    LOG_DEBUG("Loaded image '{}' ({}x{})", filePath, imgData.width, imgData.height);
     return imgData;
 }
+
+bool TextureAtlas::addImageFromFile(const std::string &filePath)
+{
+    auto imgOpt = loadImage(filePath);
+    if (!imgOpt) return false;
+
+    std::string name = std::filesystem::path(filePath).string();
+    return addImage(name, *imgOpt);
+}
+
+bool TextureAtlas::addImageFromFile(const std::wstring &filePath)
+{
+    // Convert wide path to std::filesystem::path for convenience
+    std::filesystem::path path(filePath);
+    std::string name = path.string();
+
+    // Open file in binary mode
+    FILE* f = _wfopen(filePath.c_str(), L"rb");
+    if (!f)
+    {
+        LOG_ERROR("Failed to open '{}'", path.string());
+        return false;
+    }
+
+    int width = 0, height = 0, channels = 0;
+    unsigned char* data = stbi_load_from_file(f, &width, &height, &channels, STBI_rgb_alpha);
+    fclose(f);
+
+    if (!data)
+    {
+        LOG_ERROR("Failed to load '{}': {}", path.string(), stbi_failure_reason());
+        return false;
+    }
+
+    // Copy image data into ImageData_s
+    TextureAtlas::ImageData_s imgData;
+    imgData.width = width;
+    imgData.height = height;
+    imgData.lastModified = 0; // Could fetch last_write_time if needed
+    size_t size = static_cast<size_t>(width) * height * 4;
+    imgData.pixels.resize(size);
+    std::memcpy(imgData.pixels.data(), data, size);
+    stbi_image_free(data);
+
+    // Add to cache
+    _imageDataCache[path.string()] = imgData;
+
+    // Add image to atlas
+    return addImage(name, imgData);
+}
+
 
 void TextureAtlas::packAllImages(const std::unordered_map<std::string, ImageData_s>& imgs)
 {
