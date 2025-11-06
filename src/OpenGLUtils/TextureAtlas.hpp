@@ -33,6 +33,8 @@ class TextureAtlas
     TextureAtlas(const TextureAtlas &other) = delete;
     TextureAtlas &operator=(const TextureAtlas &other) = delete;
 
+    ~TextureAtlas();
+
     void reloadTextures();
     void bindPage(int pageIndex) const;
 
