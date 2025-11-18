@@ -56,6 +56,41 @@ std::string Gump::Utils::openFilePickerDialog(const std::string& title, const st
 
     return "";
 }
+
+std::string Gump::Utils::saveFilePickerDialog(const std::string& title, const std::string& filter)
+{
+    OPENFILENAMEW ofn;
+    std::wstring wFileName(MAX_PATH, L'\0');
+
+    std::wstring wFilter = utf8ToWide(filter);
+    std::wstring wTitle  = utf8ToWide(title);
+
+    // Replace '|' with '\0' for Win32 filter
+    for (auto& ch : wFilter)
+        if (ch == L'|') ch = L'\0';
+
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = nullptr;
+    ofn.lpstrFile = &wFileName[0];
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = wFilter.c_str();
+    ofn.nFilterIndex = 1;
+
+    // Flags for SAVE dialog
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+    ofn.lpstrTitle = wTitle.c_str();
+
+    if (GetSaveFileNameW(&ofn))
+    {
+        wFileName.resize(wcslen(wFileName.c_str())); 
+        return wideToUtf8(wFileName);
+    }
+
+    return "";
+}
+
 #endif
 
 #ifdef __linux__
@@ -80,4 +115,26 @@ std::string Gump::Utils::openFilePickerDialog(const std::string& title, const st
 
     return result;
 }
+
+
+std::string Gump::Utils::saveFilePickerDialog(const std::string& title, const std::string&)
+{
+    std::string cmd =
+        "zenity --file-selection --save --confirm-overwrite --title=\"" + title + "\"";
+
+    std::array<char, 512> buffer;
+    std::string result;
+
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe) return "";
+
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+        result += buffer.data();
+
+    if (!result.empty() && result.back() == '\n')
+        result.pop_back();
+
+    return result;
+}
+
 #endif
