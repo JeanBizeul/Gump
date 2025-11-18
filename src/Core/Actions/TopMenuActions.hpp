@@ -27,6 +27,8 @@ std::expected<void, std::string> pasteAction(Application &app);
 std::expected<void, std::string> importImage(Application &app);
 std::expected<void, std::string> aboutDialog(Application &app);
 
+std::expected<void, std::string> dumpTextureAtlas(Application &app);
+
 } // namespace TopMenu
 
 } // namespace Actions

@@ -78,10 +78,16 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
             LOG_INFO("Image imported successfully");
             LOG_DEBUG("Creating new Layer from imported image");
             auto imageDataOpt = app.getTextureAtlas().getImageData(filepath);
+            auto textureOpt = app.getTextureAtlas().getUVRect(filepath);
             if (imageDataOpt) {
                 const auto &imageData = imageDataOpt->get();
                 std::string name = "L " + std::to_string(app.getLayerCount() + 1);
-                app.addLayer(name, static_cast<size_t>(imageData.width), static_cast<size_t>(imageData.height));
+                app.addLayer(name,
+                    static_cast<size_t>(imageData.width),
+                    static_cast<size_t>(imageData.height),
+                    textureOpt->uvMin,
+                    textureOpt->uvMax,
+                    textureOpt->pageIndex);
                 LOG_INFO("New layer created for image: {}", filepath);
             }
         } else {
@@ -94,5 +100,12 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
 std::expected<void, std::string> Actions::TopMenu::aboutDialog(Application &app)
 {
     LOG_DEBUG("Action: About Dialog");
+    return {};
+}
+
+std::expected<void, std::string> Actions::TopMenu::dumpTextureAtlas(Application &app)
+{
+    LOG_INFO("Dumping Texture Atlas...");
+    app.getTextureAtlas().dumpAtlas("texture_atlas_dump.png");
     return {};
 }

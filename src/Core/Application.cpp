@@ -77,8 +77,11 @@ void Gump::Application::render()
     _shader->use();
     _shader->set("uProjectionView", pv);
 
-    for (const auto& layer : _layers)
+    for (const auto& layer : _layers) {
+        _textureAtlas->bindPage(layer->texturePageIndex);
+        _shader->set("uTexture", 0);
         layer->draw();
+    }
 }
 
 
@@ -115,7 +118,8 @@ Gump::Layer &Gump::Application::getLayer(size_t index) const
     return *_layers.at(index);
 }
 
-void Gump::Application::addLayer(std::string name, size_t width, size_t height)
+void Gump::Application::addLayer(const std::string &name, size_t width, size_t height,
+    glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
 {
-    _layers.push_back(std::make_unique<Layer>(width, height, name));
+    _layers.push_back(std::make_unique<Layer>(name, width, height, uvMin, uvMax, textureID));
 }

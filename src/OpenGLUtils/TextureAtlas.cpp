@@ -13,6 +13,9 @@
 #define STB_RECT_PACK_IMPLEMENTATION
 #include "stb/stb_rect_pack.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb/stb_image_write.h"
+
 #include "Logger.hpp"
 
 using namespace OpenGLUtils;
@@ -274,4 +277,43 @@ void TextureAtlas::bindPage(int pageIndex) const
     if (pageIndex < 0 || pageIndex >= (int)_pages.size()) return;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _pages[pageIndex].textureId);
+}
+
+void TextureAtlas::dumpAtlas(const std::string &outputFile) const
+{
+    LOG_INFO("Dumping TextureAtlas to '{}'", outputFile);
+
+    if (_pages.empty()) {
+        LOG_WARNING("TextureAtlas has no pages to dump.");
+        return;
+    }
+
+    const AtlasPage &page = _pages[0];
+    if (page.cpuPixels.empty()) {
+        LOG_WARNING("First atlas page has no pixels to dump.");
+        return;
+    }
+
+    int width  = std::min(4096, page.width);
+    int height = std::min(4096, page.height);
+
+    std::vector<unsigned char> bigPixels(width * height * 4, 0);
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            size_t srcIdx = (y * page.width + x) * 4;
+            size_t dstIdx = (y * width + x) * 4;
+            std::memcpy(&bigPixels[dstIdx], &page.cpuPixels[srcIdx], 4);
+        }
+    }
+
+    // Make path absolute for safety
+    std::filesystem::path outPath = std::filesystem::absolute(outputFile);
+    LOG_DEBUG("Writing PNG to absolute path '{}'", outPath.string());
+
+    if (stbi_write_png(outPath.string().c_str(), width, height, 4, bigPixels.data(), width * 4)) {
+        LOG_INFO("TextureAtlas dumped to '{}'", outPath.string());
+    } else {
+        LOG_ERROR("Failed to dump TextureAtlas to '{}'", outPath.string());
+    }
 }

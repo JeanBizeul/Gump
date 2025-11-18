@@ -1,6 +1,13 @@
 #include "Layer.hpp"
 #include <vector>
 
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
+
+#include <glm/vec2.hpp>
+
+#include "Logger.hpp"
+
 using namespace Gump;
 
 const std::vector<unsigned int> Indices = {
@@ -8,22 +15,24 @@ const std::vector<unsigned int> Indices = {
     2, 3, 0
 };
 
-Layer::Layer(size_t width, size_t height, const std::string &name)
-    : _width(width), _height(height), name(name)
+Layer::Layer(const std::string &name, size_t width, size_t height,
+    glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
+    : name(name), _width(width), _height(height), texturePageIndex(textureID)
 {
     const std::vector<OpenGLUtils::Vertex_t> vertices = {
-        // Position                  // UVs
-        { { 0.0f,    0.0f,    0.0f }, { 0.0f, 0.0f } },
-        { { _width,   0.0f,    0.0f }, { 1.0f, 0.0f } },
-        { { _width,   _height,  0.0f }, { 1.0f, 1.0f } },
-        { { 0.0f,    _height,  0.0f }, { 0.0f, 1.0f } }
+           // Position                            // UVs
+        { { 0.0f,         0.0f,          0.0f }, { uvMin.x, uvMin.y } }, // top-left
+        { { (float)width, 0.0f,          0.0f }, { uvMax.x, uvMin.y } }, // top-right
+        { { (float)width, (float)height, 0.0f }, { uvMax.x, uvMax.y } }, // bottom-right
+        { { 0.0f,         (float)height, 0.0f }, { uvMin.x, uvMax.y } }  // bottom-left
     };
 
     _mesh = std::make_unique<OpenGLUtils::Mesh>(vertices, Indices);
 }
 
-// Draw only binds and draws the mesh
 void Layer::draw() const {
+    if (!isVisible) return;
+
     _mesh->bind();
     _mesh->draw();
 }

@@ -52,6 +52,8 @@ public:
     // Add one image dynamically
     bool addImageFromFile(const std::string &filePath);
 
+    void dumpAtlas(const std::string &outputFile) const; // TEMPORARY  debug function
+
 private:
     struct AtlasPage {
         unsigned int textureId = 0;

@@ -10,7 +10,8 @@ namespace Gump {
 
 class Layer {
 public:
-    Layer(size_t width, size_t height, const std::string &name);
+    Layer(const std::string &name, size_t width, size_t height,
+        glm::vec2 uvMin, glm::vec2 uvMax, size_t texturePageIndex);
     ~Layer() = default;
 
     void draw() const;  // only draws the mesh
@@ -23,10 +24,12 @@ public:
 
     OpenGLUtils::Mesh* getMesh() const { return _mesh.get(); }
 
+    const size_t texturePageIndex;
+
 private:
+    std::unique_ptr<OpenGLUtils::Mesh> _mesh;
     size_t _width;
     size_t _height;
-    std::unique_ptr<OpenGLUtils::Mesh> _mesh;
 };
 
 } // namespace Gump

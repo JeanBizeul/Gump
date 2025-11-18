@@ -100,6 +100,16 @@ void Gump::UI::renderTopMenu(Application &app)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Debug")) {
+            if (ImGui::MenuItem("Dump Texture Atlas")) {
+                auto result = Gump::Actions::TopMenu::dumpTextureAtlas(app);
+                if (!result) {
+                    LOG_ERROR("Failed to dump texture atlas: {}", result.error());
+                }
+            }
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 }

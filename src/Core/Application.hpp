@@ -32,7 +32,8 @@ class Application
     void moveLayerUp(size_t index);
     void moveLayerDown(size_t index);
     Layer &getLayer(size_t index) const;
-    void addLayer(std::string name, size_t width, size_t height);
+    void addLayer(const std::string &name, size_t width, size_t height,
+      glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
 
  private:
     std::unique_ptr<OpenGLUtils::Window> _window;
