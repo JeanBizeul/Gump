@@ -28,6 +28,8 @@ Gump::Application::Application()
             "shaders/canva.vert",
             "shaders/canva.frag"
         );
+        LOG_DEBUG("Initializing input ...");
+        Input::initialize(_window->getHandle());
     } catch (std::exception e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -38,15 +40,15 @@ void Gump::Application::run()
 {
     while (_running) {
         _window->pollEvents();
-        processInput();
         update();
-
+        
         _window->beginFrame();
         render();
         _window->beginImGuiFrame();
         Gump::renderUI(*this);
         _window->endFrame();
-
+        
+        Input::update();
         if (_window->shouldClose()) _running = false;
     }
 }
@@ -61,13 +63,12 @@ OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
     return *_textureAtlas;
 }
 
-void Gump::Application::processInput()
-{
-
-}
-
 void Gump::Application::update()
 {
+    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) || 
+        Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE)) {
+        _camera->move(Input::getMouseDelta());
+    }
 }
 
 void Gump::Application::render()
