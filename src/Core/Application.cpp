@@ -16,6 +16,7 @@ const std::string_view WindowName = "Gump";
 const std::string TexturesFolderPath = "assets/textures/";
 
 Gump::Application::Application()
+    : _windowSize(WindowWidth, WindowHeight)
 {
     try {
         LOG_DEBUG("Creating window ...");
@@ -138,4 +139,9 @@ OpenGLUtils::Shader &Gump::Application::getShader()
 OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
 {
     return *_textureAtlas;
+}
+
+glm::uvec2 Gump::Application::getWindowSize() const
+{
+    return _windowSize;
 }

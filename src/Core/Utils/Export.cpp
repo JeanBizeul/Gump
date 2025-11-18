@@ -56,7 +56,7 @@ static void createExportFBO(unsigned int width, unsigned int height)
 }
 
 
-bool Utils::exportPNG(const std::string &filepath, const std::vector<std::unique_ptr<Layer>> &layers, const OpenGLUtils::Shader &shader, const OpenGLUtils::TextureAtlas &atlas)
+bool Utils::exportPNG(const std::string &filepath, const std::vector<std::unique_ptr<Layer>> &layers, const OpenGLUtils::Shader &shader, const OpenGLUtils::TextureAtlas &atlas, glm::uvec2 windowSize)
 {
     LOG_INFO("Preparing to export PNG to {}", filepath);
     glm::uvec2 exportSize = findBiggestLayerSize(layers);
@@ -83,16 +83,14 @@ bool Utils::exportPNG(const std::string &filepath, const std::vector<std::unique
         layer->draw();
     }
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 
     LOG_DEBUG("Reading pixels from frame buffer");
     std::vector<unsigned char> pixels(exportSize.x * exportSize.y * 4);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glReadPixels(0, 0, exportSize.x, exportSize.y,
                 GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, windowSize.x, windowSize.y);
     
     // Flip vertically
     for (int y = 0; y < exportSize.y / 2; ++y)

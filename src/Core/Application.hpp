@@ -38,9 +38,12 @@ class Application
     OpenGLUtils::Shader &getShader();
     OpenGLUtils::TextureAtlas &getTextureAtlas();
 
+    glm::uvec2 getWindowSize() const;
+
 
  private:
     bool _running = true;
+    glm::uvec2 _windowSize;
  
     std::unique_ptr<OpenGLUtils::Window> _window;
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;

@@ -54,7 +54,7 @@ std::expected<void, std::string> Actions::TopMenu::exportFile(Application &app)
         return std::unexpected(std::string("Export cancelled by user"));
     } else {
         filepath = ensureExtension(filepath, ".png");
-     Utils::exportPNG(filepath, app.getLayers(), app.getShader(), app.getTextureAtlas());
+     Utils::exportPNG(filepath, app.getLayers(), app.getShader(), app.getTextureAtlas(), app.getWindowSize());
     }
     return {};
 }
