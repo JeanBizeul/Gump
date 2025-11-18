@@ -5,8 +5,10 @@ in vec2 UV;
 out vec4 FragColor;
 
 uniform sampler2D uTexture;
+uniform float uTransparency;
 
 void main()
 {
-    FragColor = texture(uTexture, UV);
+    vec4 texColor = texture(uTexture, UV);
+    FragColor = vec4(texColor.rgb, texColor.a * uTransparency);
 }

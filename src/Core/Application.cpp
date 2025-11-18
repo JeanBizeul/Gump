@@ -10,8 +10,8 @@
 
 #include "UI/UI.hpp"
 
-const size_t WindowWidth = 1440;
-const size_t WindowHeight = 1080;
+const size_t WindowWidth = 1680;
+const size_t WindowHeight = 980;
 const std::string_view WindowName = "Gump";
 const std::string TexturesFolderPath = "assets/textures/";
 
@@ -80,6 +80,7 @@ void Gump::Application::render()
     for (const auto& layer : _layers) {
         _textureAtlas->bindPage(layer->texturePageIndex);
         _shader->set("uTexture", 0);
+        _shader->set("uTransparency", layer->transparency);
         layer->draw();
     }
 }
