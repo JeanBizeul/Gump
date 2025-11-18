@@ -58,11 +58,6 @@ void Gump::Application::stop()
     _running = false;
 }
 
-OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
-{
-    return *_textureAtlas;
-}
-
 void Gump::Application::update()
 {
     if ((Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) || 
@@ -128,4 +123,19 @@ void Gump::Application::addLayer(const std::string &name, size_t width, size_t h
     glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
 {
     _layers.push_back(std::make_unique<Layer>(name, width, height, uvMin, uvMax, textureID));
+}
+
+std::vector<std::unique_ptr<Gump::Layer>> &Gump::Application::getLayers()
+{
+    return _layers;
+}
+
+OpenGLUtils::Shader &Gump::Application::getShader()
+{
+    return *_shader;
+}
+
+OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
+{
+    return *_textureAtlas;
 }

@@ -27,7 +27,7 @@ std::expected<void, std::string> Actions::TopMenu::saveFile(Application &app)
 
 std::expected<void, std::string> Actions::TopMenu::exportFile(Application &app)
 {
-    LOG_DEBUG("Action: Export File");
+    Utils::exportPNG("exported_image.png", app.getLayers(), app.getShader(), app.getTextureAtlas());
     return {};
 }
 

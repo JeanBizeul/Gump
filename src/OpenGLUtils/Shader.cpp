@@ -84,7 +84,7 @@ OpenGLUtils::Shader::~Shader()
     glDeleteProgram(_shaderProgram);
 }
 
-void OpenGLUtils::Shader::use()
+void OpenGLUtils::Shader::use() const
 {
     return glUseProgram(_shaderProgram);
 }

@@ -25,16 +25,19 @@ class Application
     void run();
     void stop();
 
-    OpenGLUtils::TextureAtlas &getTextureAtlas();
-
-    size_t getLayerCount() const;
     bool canLayerMoveUp(size_t index) const;
     bool canLayerMoveDown(size_t index) const;
     void moveLayerUp(size_t index);
     void moveLayerDown(size_t index);
-    Layer &getLayer(size_t index) const;
     void addLayer(const std::string &name, size_t width, size_t height,
       glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
+    size_t getLayerCount() const;
+    Layer &getLayer(size_t index) const;
+    std::vector<std::unique_ptr<Layer>> &getLayers();
+
+    OpenGLUtils::Shader &getShader();
+    OpenGLUtils::TextureAtlas &getTextureAtlas();
+
 
  private:
     bool _running = true;

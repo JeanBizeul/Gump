@@ -17,7 +17,7 @@ class Shader
             const std::string &fragmentPath);
         ~Shader();
 
-        void use();
+        void use() const;
 
         void set(const std::string &name, bool value) const;
         void set(const std::string &name, int value) const;
