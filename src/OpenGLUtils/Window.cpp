@@ -31,8 +31,6 @@ OpenGLUtils::Window::Window(size_t width, size_t height, std::string name)
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         throw std::runtime_error("Failed to initialize GLAD");
     
-    glEnable(GL_DEPTH_TEST); // Used to sort out order of faces
-
     // Setup Dear ImGUI
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -62,16 +60,27 @@ bool OpenGLUtils::Window::shouldClose() const
     return glfwWindowShouldClose(_windowHandle);
 }
 
-void OpenGLUtils::Window::beginFrame()
+void OpenGLUtils::Window::pollEvents()
 {
     glfwPollEvents();
+}
 
+void OpenGLUtils::Window::beginFrame()
+{
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Need to reset some stuff as imgui may have changed them
+    glDisable(GL_DEPTH_TEST);             // 2D overlay
+    glEnable(GL_BLEND);                   
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void OpenGLUtils::Window::beginImGuiFrame()
+{
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void OpenGLUtils::Window::endFrame()

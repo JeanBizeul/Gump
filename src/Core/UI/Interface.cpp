@@ -6,13 +6,16 @@
 
 void Gump::renderUI(Gump::Application &app)
 {
-    int dockspaceId = ImGui::DockSpaceOverViewport();
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
     static bool first = true;
 
     if (first) {
         Gump::UI::setupDockLayout(dockspaceId);
         first = false;
     }
+
+    ImGui::DockSpaceOverViewport(dockspaceId, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
 
     Gump::UI::renderTopMenu(app);
     Gump::UI::renderTools(app);

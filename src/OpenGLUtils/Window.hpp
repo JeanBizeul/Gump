@@ -15,7 +15,9 @@ class Window {
     ~Window();
 
     bool shouldClose() const;
+    void pollEvents();
     void beginFrame();
+    void beginImGuiFrame();
     void endFrame();
 
     GLFWwindow *getHandle() const;

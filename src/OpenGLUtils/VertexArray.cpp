@@ -26,10 +26,7 @@ OpenGLUtils::VertexArray::VertexArray(VertexBuffer &vbo, IndexBuffer &ebo)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)(offsetof(Vertex_t, normal)));
-
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)(offsetof(Vertex_t, uv)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)(offsetof(Vertex_t, uv)));
 
     this->unbind();
 }

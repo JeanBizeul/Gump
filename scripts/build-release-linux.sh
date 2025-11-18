@@ -5,6 +5,7 @@ set -e  # exit on any error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR/.."
 BUILD_DIR="$PROJECT_DIR/build"
+CURRENT_DIR="$(pwd)"
 
 # Ensure build directory exists
 mkdir -p "$BUILD_DIR"
@@ -24,6 +25,8 @@ cmake --build .
 # Ask user if they want to run the app
 read -p "Do you want to run Gump directly? [Y/n] " runchoice
 runchoice=${runchoice:-Y}  # default to Y if empty
+
+cd "$CURRENT_DIR"
 
 if [[ "$runchoice" =~ ^[Yy]$ ]]; then
     echo "Launching Gump..."
