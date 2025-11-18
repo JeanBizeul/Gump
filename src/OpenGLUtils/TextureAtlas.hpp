@@ -49,7 +49,6 @@ public:
 
     // Add one image dynamically
     bool addImageFromFile(const std::string &filePath);
-    bool addImageFromFile(const std::wstring &filePath);
 
 private:
     struct AtlasPage {

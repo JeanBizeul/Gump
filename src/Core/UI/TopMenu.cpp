@@ -6,69 +6,87 @@
 
 #include "Logger.hpp"
 
-inline static std::string wstringToString(const std::wstring& wstr) {
-    if (wstr.empty()) return {};
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(wstr);
-}
-
+#include "Actions/TopMenuActions.hpp"
 
 void Gump::UI::renderTopMenu(Application &app)
 {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("file")) {
             if (ImGui::MenuItem("New", "Ctrl+N")) {
-                // Create new file
+                auto result = Gump::Actions::TopMenu::newFile(app);
+                if (!result) {
+                    LOG_ERROR("Failed to create new file: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Open...", "Ctrl+O")) {
-                // Open save file
+                auto result = Gump::Actions::TopMenu::openFile(app);
+                if (!result) {
+                    LOG_ERROR("Failed to open file: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
-                // Handle save
+                auto result = Gump::Actions::TopMenu::saveFile(app);
+                if (!result) {
+                    LOG_ERROR("Failed to save file: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Export", "Ctrl+E")) {
-                // Handle export
+                auto result = Gump::Actions::TopMenu::exportFile(app);
+                if (!result) {
+                    LOG_ERROR("Failed to export file: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Exit")) {
-                app.stop();
+                auto result = Gump::Actions::TopMenu::exitApplication(app);
+                if (!result) {
+                    LOG_ERROR("Failed to exit application: {}", result.error());
+                }
             }
             ImGui::EndMenu();
         }
         
         if (ImGui::BeginMenu("Edit")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
-
+                auto result = Gump::Actions::TopMenu::undoAction(app);
+                if (!result) {
+                    LOG_ERROR("Failed to undo action: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Redo", "Ctrl+Y")) {
-
+                auto result = Gump::Actions::TopMenu::redoAction(app);
+                if (!result) {
+                    LOG_ERROR("Failed to redo action: {}", result.error());
+                }
             }
 
             ImGui::Separator();
             
             if (ImGui::MenuItem("Cut", "Ctrl+X")) {
-
+                auto result = Gump::Actions::TopMenu::cutAction(app);
+                if (!result) {
+                    LOG_ERROR("Failed to cut action: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Copy", "Ctrl+C")) {
-
+                auto result = Gump::Actions::TopMenu::copyAction(app);
+                if (!result) {
+                    LOG_ERROR("Failed to copy action: {}", result.error());
+                }
             }
             if (ImGui::MenuItem("Paste", "Ctrl+V")) {
-
+                auto result = Gump::Actions::TopMenu::pasteAction(app);
+                if (!result) {
+                    LOG_ERROR("Failed to paste action: {}", result.error());
+                }
             }
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Image")) {
             if (ImGui::MenuItem("Import", "Ctrl+I")) {
-                const std::wstring filepath = Gump::UI::openFilePickerDialog("Import Image", "*.*");
-
-                if (!filepath.empty()) {
-                    LOG_INFO("Import image: {}", filepath);
-                    if (app.getTextureAtlas().addImageFromFile(filepath)) {
-                        LOG_INFO("Image imported successfully");
-                    } else {
-                        LOG_ERROR("Failed to import image");
-                    }
-                    LOG_DEBUG("Current texture atlas page count: {}", app.getTextureAtlas().getPageCount());
+                auto result = Gump::Actions::TopMenu::importImage(app);
+                if (!result) {
+                    LOG_ERROR("Failed to import image: {}", result.error());
                 }
             }
 

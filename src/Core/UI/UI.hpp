@@ -14,8 +14,5 @@ namespace UI {
     void renderToolSettings(Gump::Application &app);
     void renderBrushSettings(Gump::Application &app);
     void renderLayers(Gump::Application &app);
-
-    std::wstring openFilePickerDialog(const std::string& title = "Select a file",
-        const std::string& filter = "*.*");
 }
 }

@@ -113,21 +113,12 @@ std::optional<TextureAtlas::ImageData_s> TextureAtlas::loadImage(const std::stri
 
 bool TextureAtlas::addImageFromFile(const std::string &filePath)
 {
-    auto imgOpt = loadImage(filePath);
-    if (!imgOpt) return false;
-
-    std::string name = std::filesystem::path(filePath).string();
-    return addImage(name, *imgOpt);
-}
-
-bool TextureAtlas::addImageFromFile(const std::wstring &filePath)
-{
     // Convert wide path to std::filesystem::path for convenience
     std::filesystem::path path(filePath);
     std::string name = path.string();
 
     // Open file in binary mode
-    FILE* f = _wfopen(filePath.c_str(), L"rb");
+    FILE* f = fopen(filePath.c_str(), "rb");
     if (!f)
     {
         LOG_ERROR("Failed to open '{}'", path.string());

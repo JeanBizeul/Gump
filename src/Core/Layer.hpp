@@ -1,25 +1,27 @@
-#include <memory>
+#pragma once
 
+#include <memory>
 #include <cstddef>
 
 #include "Mesh.hpp"
-#include "Shader.hpp"
-#include "Camera2D.hpp"
 
 namespace Gump {
+
 class Layer {
- public:
+public:
     Layer(size_t width, size_t height);
     ~Layer() = default;
 
-    void draw() const;
+    void draw() const;  // only draws the mesh
+    size_t getWidth() const { return _width; }
+    size_t getHeight() const { return _height; }
 
-    void manageInputs();
- private:
+    OpenGLUtils::Mesh* getMesh() const { return _mesh.get(); }
+
+private:
     size_t _width;
     size_t _height;
     std::unique_ptr<OpenGLUtils::Mesh> _mesh;
-    std::unique_ptr<OpenGLUtils::Shader> _shader;
-    std::unique_ptr<Camera2D> _camera;
 };
-}
+
+} // namespace Gump

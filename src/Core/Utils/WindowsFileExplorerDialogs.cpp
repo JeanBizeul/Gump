@@ -1,35 +1,22 @@
-#include "UI/UI.hpp"
-
-#include <string>
+#include "Utils/Utils.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
 #include <commdlg.h>
 #include <codecvt>
 #include <locale>
-#endif
 
-#ifdef __linux__
-#include <cstdio>
-#include <memory>
-#include <array>
-#endif
-
-namespace Gump::UI
-{
-
-#ifdef _WIN32
-std::wstring openFilePickerDialog(const std::string& title, const std::string& filter)
+std::string Gump::Utils::openFilePickerDialog(const std::string& title, const std::string& filter)
 {
     OPENFILENAMEW ofn;
     std::wstring wFileName(MAX_PATH, L'\0');
     std::wstring wFilter;
     std::wstring wTitle;
 
-    // Convert filter and title to wide strings
+    // Convert UTF-8 to wide strings for Win32 API
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     wFilter = conv.from_bytes(filter);
-    wTitle = conv.from_bytes(title);
+    wTitle  = conv.from_bytes(title);
 
     // Replace '|' with '\0' for Win32 filter
     for (auto& ch : wFilter)
@@ -47,16 +34,21 @@ std::wstring openFilePickerDialog(const std::string& title, const std::string& f
 
     if (GetOpenFileNameW(&ofn))
     {
-        wFileName.resize(wcslen(wFileName.c_str())); // remove extra nulls
-        return wFileName;
+        wFileName.resize(wcslen(wFileName.c_str())); // trim extra nulls
+        // Convert back to UTF-8 string
+        return conv.to_bytes(wFileName);
     }
 
-    return L"";
+    return "";
 }
 #endif
 
 #ifdef __linux__
-std::wstring openFilePickerDialog(const std::string& title, const std::string& /*filter*/)
+#include <cstdio>
+#include <memory>
+#include <array>
+
+std::string Gump::Utils::openFilePickerDialog(const std::string& title, const std::string& /*filter*/)
 {
     std::string cmd = "zenity --file-selection --title=\"" + title + "\"";
     std::array<char, 512> buffer;
@@ -74,5 +66,3 @@ std::wstring openFilePickerDialog(const std::string& title, const std::string& /
     return result;
 }
 #endif
-
-} // namespace Gump::UI
