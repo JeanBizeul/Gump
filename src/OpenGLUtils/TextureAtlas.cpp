@@ -62,7 +62,7 @@ TextureAtlas::loadImagesFromFolder(const std::string &path)
 {
     std::unordered_map<std::string, ImageData_s> result;
 
-    LOG_INFO("Loading images recursively from folder: {}", path);
+    LOG_INFO("Loading images recursively from {}", path);
     for (auto &file : std::filesystem::recursive_directory_iterator(path))
     {
         if (!file.is_regular_file()) continue;
@@ -76,7 +76,7 @@ TextureAtlas::loadImagesFromFolder(const std::string &path)
         _imageDataCache[file.path().string()] = *imgOpt;
     }
 
-    LOG_INFO("Successfully loaded {} images from folder", result.size());
+    LOG_INFO("Successfully loaded {} images from {}", result.size(), path);
 
     return result;
 }

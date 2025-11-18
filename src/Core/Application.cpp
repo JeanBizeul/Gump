@@ -18,8 +18,8 @@ Gump::Application::Application()
     try {
         LOG_DEBUG("Creating window ...");
         _window = std::make_unique<OpenGLUtils::Window>(WindowWidth, WindowHeight, std::string(WindowName));
-        LOG_DEBUG("Creating canva ...");
-        _canva = std::make_unique<Canva>();
+        LOG_DEBUG("Creating layer ...");
+        _layer = std::make_unique<Layer>(500, 500);
         LOG_DEBUG("Loading assets ...");
         _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>(TexturesFolderPath);
     } catch (std::exception e) {
@@ -31,11 +31,14 @@ Gump::Application::Application()
 void Gump::Application::run()
 {
     while (_running) {
+        _window->pollEvents();
         processInput();
         update();
 
         _window->beginFrame();
         render();
+        _window->beginImGuiFrame();
+        Gump::renderUI(*this);
         _window->endFrame();
 
         if (_window->shouldClose()) _running = false;
@@ -59,11 +62,10 @@ void Gump::Application::processInput()
 
 void Gump::Application::update()
 {
-    _canva->manageInputs();
+    _layer->manageInputs();
 }
 
 void Gump::Application::render()
 {  
-    Gump::renderUI(*this);
-    _canva->draw();
+    _layer->draw();
 }

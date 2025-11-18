@@ -2,8 +2,9 @@
 #include <glm/glm.hpp>
 
 namespace Gump {
+
 class Camera2D {
-public:
+ public:
     Camera2D();
 
     // Movement
@@ -19,12 +20,14 @@ public:
     float getZoom() const;
 
     // Matrices
-    glm::mat4 getViewMatrix() const;
-    glm::mat4 getProjectionMatrix() const;
     glm::mat4 getPVMatrix() const;
-
-private:
+    
+ private:
     glm::vec2 _position;
     float _zoom;
+
+    glm::mat4 getViewMatrix(float width, float height) const;
+    glm::mat4 getProjectionMatrix(float width, float height) const;
 };
-}
+
+} // namespace Gump
