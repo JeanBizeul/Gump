@@ -7,6 +7,26 @@
 
 using namespace Gump;
 
+static std::string ensureExtension(const std::string& path, const std::string& ext)
+{
+    // ext must begin with "."
+    std::string dotExt = ext;
+    if (dotExt.front() != '.')
+        dotExt = "." + dotExt;
+
+    // Find last dot after the last slash → checks if user already provided an extension
+    size_t slashPos = path.find_last_of("/\\");
+    size_t dotPos   = path.find_last_of('.');
+
+    bool hasExt = (dotPos != std::string::npos && (slashPos == std::string::npos || dotPos > slashPos));
+
+    if (!hasExt)
+        return path + dotExt;
+
+    return path;
+}
+
+
 std::expected<void, std::string> Actions::TopMenu::newFile(Application &app)
 {
     LOG_DEBUG("Action: New File");
@@ -27,7 +47,15 @@ std::expected<void, std::string> Actions::TopMenu::saveFile(Application &app)
 
 std::expected<void, std::string> Actions::TopMenu::exportFile(Application &app)
 {
-    Utils::exportPNG("exported_image.png", app.getLayers(), app.getShader(), app.getTextureAtlas());
+    std::string filepath = Utils::saveFilePickerDialog("Save Image", "PNG Files (*.png)\0*.png\0");
+
+    if (filepath.empty()) {
+        LOG_INFO("Export cancelled by user");
+        return std::unexpected(std::string("Export cancelled by user"));
+    } else {
+        filepath = ensureExtension(filepath, ".png");
+     Utils::exportPNG(filepath, app.getLayers(), app.getShader(), app.getTextureAtlas());
+    }
     return {};
 }
 
@@ -70,7 +98,7 @@ std::expected<void, std::string> Actions::TopMenu::pasteAction(Application &app)
 
 std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
 {
-    const std::string filepath = Gump::Utils::openFilePickerDialog("Import Image", "*.*");
+    const std::string filepath = Gump::Utils::openFilePickerDialog("Import Image", "PNG Files (*.png)\0*.png\0");
 
     if (!filepath.empty()) {
         LOG_INFO("Importing image: {}", filepath);
