@@ -75,7 +75,7 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
     if (!filepath.empty()) {
         LOG_INFO("Importing image: {}", filepath);
         if (app.getTextureAtlas().addImageFromFile(filepath)) {
-            LOG_INFO("Image imported successfully");
+            LOG_INFO("Done");
             LOG_DEBUG("Creating new Layer from imported image");
             auto imageDataOpt = app.getTextureAtlas().getImageData(filepath);
             auto textureOpt = app.getTextureAtlas().getUVRect(filepath);
@@ -89,6 +89,11 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
                     textureOpt->uvMax,
                     textureOpt->pageIndex);
                 LOG_INFO("New layer created for image: {}", filepath);
+                LOG_DEBUG("Layer name: {}, size: {}x{}, texture page index: {}",
+                    name,
+                    imageData.width,
+                    imageData.height,
+                    textureOpt->pageIndex);
             }
         } else {
             LOG_ERROR("Failed to import image");
