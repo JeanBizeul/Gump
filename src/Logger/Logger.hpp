@@ -82,7 +82,9 @@ private:
     std::string getTimestamp() const {
         std::time_t now = std::time(nullptr);
         char buffer[20];
-        std::strftime(buffer, sizeof(buffer), "%F %T", std::localtime(&now));
+        std::tm tm{};
+        localtime_s(&tm, &now); // thread-safe version
+        std::strftime(buffer, sizeof(buffer), "%F %T", &tm);
         return buffer;
     }
 };

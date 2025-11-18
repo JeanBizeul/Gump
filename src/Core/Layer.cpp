@@ -8,8 +8,8 @@ const std::vector<unsigned int> Indices = {
     2, 3, 0
 };
 
-Layer::Layer(size_t width, size_t height)
-    : _width(width), _height(height)
+Layer::Layer(size_t width, size_t height, const std::string &name)
+    : _width(width), _height(height), name(name)
 {
     const std::vector<OpenGLUtils::Vertex_t> vertices = {
         // Position                  // UVs

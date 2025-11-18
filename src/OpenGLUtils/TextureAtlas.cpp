@@ -13,7 +13,7 @@
 #define STB_RECT_PACK_IMPLEMENTATION
 #include "stb/stb_rect_pack.h"
 
-#include "Logger.hpp" // optional, can replace with std::cout
+#include "Logger.hpp"
 
 using namespace OpenGLUtils;
 
@@ -118,7 +118,8 @@ bool TextureAtlas::addImageFromFile(const std::string &filePath)
     std::string name = path.string();
 
     // Open file in binary mode
-    FILE* f = fopen(filePath.c_str(), "rb");
+    FILE* f = nullptr;
+    fopen_s(&f, filePath.c_str(), "rb");
     if (!f)
     {
         LOG_ERROR("Failed to open '{}'", path.string());
@@ -252,8 +253,20 @@ void TextureAtlas::createNewPage()
 std::optional<UVEntry_t> TextureAtlas::getUVRect(const std::string &blockName) const
 {
     auto it = _uvMap.find(blockName);
-    if (it == _uvMap.end()) return std::nullopt;
+
+    if (it == _uvMap.end()) 
+        return std::nullopt;
     return it->second;
+}
+
+std::optional<std::reference_wrapper<const TextureAtlas::ImageData_s>>
+TextureAtlas::getImageData(const std::string &blockName) const
+{
+    auto it = _imageDataCache.find(blockName);
+
+    if (it == _imageDataCache.end())
+        return std::nullopt;
+    return std::cref(it->second);
 }
 
 void TextureAtlas::bindPage(int pageIndex) const

@@ -10,8 +10,8 @@
 
 #include "UI/UI.hpp"
 
-const size_t WindowWidth = 1080;
-const size_t WindowHeight = 720;
+const size_t WindowWidth = 1440;
+const size_t WindowHeight = 1080;
 const std::string_view WindowName = "Gump";
 const std::string TexturesFolderPath = "assets/textures/";
 
@@ -79,4 +79,43 @@ void Gump::Application::render()
 
     for (const auto& layer : _layers)
         layer->draw();
+}
+
+
+// Layer management
+size_t Gump::Application::getLayerCount() const
+{
+    return _layers.size();
+}
+
+bool Gump::Application::canLayerMoveUp(size_t index) const
+{
+    return index > 0 && _layers.size() > 1;
+}
+
+bool Gump::Application::canLayerMoveDown(size_t index) const
+{
+    return index + 1 < _layers.size();
+}
+
+void Gump::Application::moveLayerUp(size_t index)
+{
+    if (!canLayerMoveUp(index)) return;
+    std::swap(_layers[index], _layers[index - 1]);
+}
+
+void Gump::Application::moveLayerDown(size_t index)
+{
+    if (!canLayerMoveDown(index)) return;
+    std::swap(_layers[index], _layers[index + 1]);
+}
+
+Gump::Layer &Gump::Application::getLayer(size_t index) const
+{
+    return *_layers.at(index);
+}
+
+void Gump::Application::addLayer(std::string name, size_t width, size_t height)
+{
+    _layers.push_back(std::make_unique<Layer>(width, height, name));
 }

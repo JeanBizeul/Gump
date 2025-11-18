@@ -76,6 +76,14 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
         LOG_INFO("Importing image: {}", filepath);
         if (app.getTextureAtlas().addImageFromFile(filepath)) {
             LOG_INFO("Image imported successfully");
+            LOG_DEBUG("Creating new Layer from imported image");
+            auto imageDataOpt = app.getTextureAtlas().getImageData(filepath);
+            if (imageDataOpt) {
+                const auto &imageData = imageDataOpt->get();
+                std::string name = "L " + std::to_string(app.getLayerCount() + 1);
+                app.addLayer(name, static_cast<size_t>(imageData.width), static_cast<size_t>(imageData.height));
+                LOG_INFO("New layer created for image: {}", filepath);
+            }
         } else {
             LOG_ERROR("Failed to import image");
         }
