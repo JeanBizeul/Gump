@@ -83,7 +83,11 @@ private:
         std::time_t now = std::time(nullptr);
         char buffer[20];
         std::tm tm{};
-        localtime_s(&tm, &now); // thread-safe version
+#if defined(_WIN32) || defined(_WIN64)
+        localtime_s(&tm, &now);  // Windows: thread-safe
+#else
+        localtime_r(&now, &tm);  // Linux/Unix: thread-safe
+#endif
         std::strftime(buffer, sizeof(buffer), "%F %T", &tm);
         return buffer;
     }
