@@ -12,6 +12,7 @@
 #include "Shader.hpp"
 #include "TextureAtlas.hpp"
 #include "Camera2D.hpp"
+#include "Input.hpp"
 
 namespace Gump
 {
@@ -36,17 +37,14 @@ class Application
       glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
 
  private:
-    std::unique_ptr<OpenGLUtils::Window> _window;
     bool _running = true;
-
+ 
+    std::unique_ptr<OpenGLUtils::Window> _window;
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
-
     std::vector<std::unique_ptr<Layer>> _layers;
-
     std::unique_ptr<OpenGLUtils::Shader> _shader;
     std::unique_ptr<Camera2D> _camera;
 
-    void processInput();
     void update();
     void render();
 };

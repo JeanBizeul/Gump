@@ -13,7 +13,7 @@ Camera2D::Camera2D()
 }
 
 // Movement
-void Camera2D::move(const glm::vec2& delta) { _position += delta; }
+void Camera2D::move(const glm::vec2& delta) { _position += delta / _zoom; }
 void Camera2D::setPosition(const glm::vec2& pos) { _position = pos; }
 
 // Zoom
