@@ -11,7 +11,7 @@ std::unordered_map<int, Input::KeyState> Input::_mouseButtons;
 double Input::_mouseX = 0.0, Input::_mouseY = 0.0;
 double Input::_prevMouseX = 0.0, Input::_prevMouseY = 0.0;
 double Input::_mouseDeltaX = 0.0, Input::_mouseDeltaY = 0.0;
-double Input::_mouseScrollDelta = 0.0;
+glm::vec2 Input::_mouseScrollDelta = {0.0, 0.0};
 
 GLFWkeyfun Input::prevKeyCallback = nullptr;
 GLFWmousebuttonfun Input::prevMouseButtonCallback = nullptr;
@@ -39,6 +39,22 @@ void Input::update()
     for (auto& [b, s] : _mouseButtons) {
         if (s == KeyState::Pressed) s = KeyState::Held;
         else if (s == KeyState::Released) s = KeyState::None;
+    }
+
+    if (_mouseScrollDelta.y > 0.1f) {
+        _mouseScrollDelta.y *= 0.7f;
+    } else if (_mouseScrollDelta.y < -0.1f) {
+        _mouseScrollDelta.y *= 0.7f;
+    } else {
+        _mouseScrollDelta.y = 0.0f;
+    }
+
+    if (_mouseScrollDelta.x > 0.1f) {
+        _mouseScrollDelta.x *= 0.7f;
+    } else if (_mouseScrollDelta.x < -0.1f) {
+        _mouseScrollDelta.x *= 0.7f;
+    } else {
+        _mouseScrollDelta.x = 0.0f;
     }
 }
 
@@ -82,7 +98,7 @@ glm::vec2 Input::getMouseDelta()
     return { static_cast<float>(_mouseDeltaX), static_cast<float>(_mouseDeltaY) };
 }
 
-double Input::getMouseScrollDelta()
+glm::vec2 Input::getMouseScrollDelta()
 {
     return _mouseScrollDelta;
 }
@@ -147,7 +163,7 @@ void Input::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 
     if (!io.WantCaptureMouse)
     {
-        _mouseScrollDelta = yoffset;
+        _mouseScrollDelta = glm::vec2(static_cast<float>(xoffset), static_cast<float>(yoffset));
     }
 
     // Forward to ImGui

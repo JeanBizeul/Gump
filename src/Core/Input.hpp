@@ -23,7 +23,7 @@ public:
 
     static glm::vec2 getMousePosition();
     static glm::vec2 getMouseDelta();
-    static double getMouseScrollDelta();
+    static glm::vec2 getMouseScrollDelta();
 
     static bool isMouseButtonPressed(int button);
     static bool isMouseButtonReleased(int button);
@@ -37,7 +37,7 @@ private:
     static double _mouseX, _mouseY;
     static double _prevMouseX, _prevMouseY;
     static double _mouseDeltaX, _mouseDeltaY;
-    static double _mouseScrollDelta;
+    static glm::vec2 _mouseScrollDelta;
 
     static GLFWkeyfun prevKeyCallback;
     static GLFWmousebuttonfun prevMouseButtonCallback;

@@ -69,6 +69,10 @@ void Gump::Application::update()
         Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE)) {
         _camera->move(Input::getMouseDelta());
     }
+
+    if (Input::getMouseScrollDelta().y != 0.0f) {
+        _camera->zoom(1.0f + Input::getMouseScrollDelta().y * 0.1f);
+    }
 }
 
 void Gump::Application::render()
