@@ -121,7 +121,7 @@ void Input::cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 
     if (!io.WantCaptureMouse)
     {
-        _mouseDeltaX = xpos - _prevMouseX;
+        _mouseDeltaX = -(xpos - _prevMouseX);
         _mouseDeltaY = ypos - _prevMouseY;
 
         _prevMouseX = xpos;
