@@ -65,8 +65,8 @@ OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
 
 void Gump::Application::update()
 {
-    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) || 
-        Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE)) {
+    if ((Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) || 
+        Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE))) {
         _camera->move(Input::getMouseDelta());
     }
 
