@@ -139,6 +139,11 @@ std::expected<void, std::string> Actions::TopMenu::aboutDialog(Application &app)
 std::expected<void, std::string> Actions::TopMenu::dumpTextureAtlas(Application &app)
 {
     LOG_INFO("Dumping Texture Atlas...");
-    app.getTextureAtlas().dumpAtlas("texture_atlas_dump.png");
+    std::string filepath = Utils::saveFilePickerDialog("Save Texture Atlas", "PNG Files (*.png)\0*.png\0");
+    if (filepath.empty()) {
+        LOG_INFO("Dump cancelled by user");
+        return std::unexpected(std::string("Dump cancelled by user"));
+    }
+    app.getTextureAtlas().dumpAtlas(filepath);
     return {};
 }

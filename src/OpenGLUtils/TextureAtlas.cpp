@@ -294,8 +294,8 @@ void TextureAtlas::dumpAtlas(const std::string &outputFile) const
         return;
     }
 
-    int width  = std::min(4096, page.width);
-    int height = std::min(4096, page.height);
+    int width  = std::min(16384, page.width);
+    int height = std::min(16384, page.height);
 
     std::vector<unsigned char> bigPixels(width * height * 4, 0);
 
