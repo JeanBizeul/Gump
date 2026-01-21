@@ -1,6 +1,6 @@
 #include "ToolsFunctions.hpp"
-#include "../Application.hpp"
-#include "../Input.hpp"
+#include "Application.hpp"
+#include "Input.hpp"
 #include <GLFW/glfw3.h>
 
 void Gump::Tools::UpdateMoveTool(Application &app)

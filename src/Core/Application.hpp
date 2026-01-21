@@ -31,6 +31,13 @@ struct ResizeCanvasRequest {
     bool isRequested = false;
 };
 
+struct Clipboard {
+    bool hasData = false;
+    int width = 0;
+    int height = 0;
+    std::vector<unsigned char> pixels;
+};
+
 struct SelectionState {
     bool hasSelection = false;
     glm::vec2 startPos;
@@ -92,6 +99,12 @@ class Application
     SelectionState& getSelectionState();
     void updateSelectionMesh();
 
+    // Clipboard operations
+    Clipboard& getClipboard();
+    void copySelection();
+    void cutSelection();
+    void pasteClipboard();
+
     // Extract pixels from selection and create a new layer
     void sendSelectionToNewLayer();
 
@@ -101,6 +114,7 @@ class Application
     glm::uvec2 _canvasSize;
     PendingImport _pendingImport;
     ResizeCanvasRequest _resizeCanvasRequest;
+    Clipboard _clipboard;
 
     std::string _selectedTool = "move";
     SelectionState _selectionState;

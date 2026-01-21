@@ -229,9 +229,194 @@ Gump::SelectionState& Gump::Application::getSelectionState()
     return _selectionState;
 }
 
+Gump::Clipboard& Gump::Application::getClipboard()
+{
+    return _clipboard;
+}
+
 Gump::Camera2D& Gump::Application::getCamera()
 {
     return *_camera;
+}
+
+void Gump::Application::copySelection()
+{
+    if (!_selectionState.hasSelection || _layers.empty()) {
+        LOG_WARNING("No selection or no layers available for copy");
+        return;
+    }
+
+    // Get the top layer (last in the vector)
+    auto& topLayer = _layers.back();
+
+    // Calculate selection bounds in layer space
+    glm::vec2 selMin = _selectionState.getMin();
+    glm::vec2 selMax = _selectionState.getMax();
+
+    // Clamp selection to layer bounds
+    selMin = glm::max(selMin, glm::vec2(0.0f));
+    selMax = glm::min(selMax, glm::vec2(topLayer->getWidth(), topLayer->getHeight()));
+
+    int selWidth = static_cast<int>(selMax.x - selMin.x);
+    int selHeight = static_cast<int>(selMax.y - selMin.y);
+
+    if (selWidth <= 0 || selHeight <= 0) {
+        LOG_WARNING("Invalid selection dimensions for copy");
+        return;
+    }
+
+    LOG_INFO("Copying selection {}x{} to clipboard", selWidth, selHeight);
+
+    // Get the texture page for the top layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(topLayer->texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    // Read pixels from the GPU texture
+    _clipboard.pixels.resize(selWidth * selHeight * 4);
+
+    glBindTexture(GL_TEXTURE_2D, *pageTexIdOpt);
+
+    // Get UV coordinates for the layer
+    glm::vec2 layerUVMin = topLayer->getUVMin();
+    glm::vec2 layerUVMax = topLayer->getUVMax();
+
+    // Calculate texture coordinates in pixels
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Convert layer UV to pixel coordinates
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    // Calculate selection position in texture
+    int texX = layerTexX + static_cast<int>(selMin.x);
+    int texY = layerTexY + static_cast<int>(selMin.y);
+
+    // Create a framebuffer to read from the texture
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *pageTexIdOpt, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+        // Read pixels from the framebuffer
+        glReadPixels(texX, texY, selWidth, selHeight, GL_RGBA, GL_UNSIGNED_BYTE, _clipboard.pixels.data());
+    } else {
+        LOG_ERROR("Framebuffer incomplete, cannot read pixels");
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &fbo);
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+
+    // Update clipboard metadata
+    _clipboard.width = selWidth;
+    _clipboard.height = selHeight;
+    _clipboard.hasData = true;
+
+    LOG_INFO("Selection copied to clipboard");
+}
+
+void Gump::Application::cutSelection()
+{
+    if (!_selectionState.hasSelection || _layers.empty()) {
+        LOG_WARNING("No selection or no layers available for cut");
+        return;
+    }
+
+    // First, copy the selection to clipboard
+    copySelection();
+
+    if (!_clipboard.hasData) {
+        LOG_ERROR("Failed to copy selection before cutting");
+        return;
+    }
+
+    // Get the top layer
+    auto& topLayer = _layers.back();
+
+    // Calculate selection bounds in layer space
+    glm::vec2 selMin = _selectionState.getMin();
+    glm::vec2 selMax = _selectionState.getMax();
+
+    // Clamp selection to layer bounds
+    selMin = glm::max(selMin, glm::vec2(0.0f));
+    selMax = glm::min(selMax, glm::vec2(topLayer->getWidth(), topLayer->getHeight()));
+
+    int selWidth = static_cast<int>(selMax.x - selMin.x);
+    int selHeight = static_cast<int>(selMax.y - selMin.y);
+
+    LOG_INFO("Clearing selection area {}x{} from layer", selWidth, selHeight);
+
+    // Get the texture page for the top layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(topLayer->texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    // Create transparent pixels to clear the selection
+    std::vector<unsigned char> transparentPixels(selWidth * selHeight * 4, 0);
+
+    glBindTexture(GL_TEXTURE_2D, *pageTexIdOpt);
+
+    // Get UV coordinates for the layer
+    glm::vec2 layerUVMin = topLayer->getUVMin();
+
+    // Calculate texture coordinates in pixels
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Convert layer UV to pixel coordinates
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    // Calculate selection position in texture
+    int texX = layerTexX + static_cast<int>(selMin.x);
+    int texY = layerTexY + static_cast<int>(selMin.y);
+
+    // Update the texture with transparent pixels
+    glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, selWidth, selHeight,
+                    GL_RGBA, GL_UNSIGNED_BYTE, transparentPixels.data());
+
+    LOG_INFO("Selection area cleared from layer");
+}
+
+void Gump::Application::pasteClipboard()
+{
+    if (!_clipboard.hasData) {
+        LOG_WARNING("Clipboard is empty, nothing to paste");
+        return;
+    }
+
+    LOG_INFO("Pasting clipboard content {}x{}", _clipboard.width, _clipboard.height);
+
+    // Create a unique name for the new layer
+    std::string newLayerName = "Pasted_" + std::to_string(_layers.size() + 1);
+
+    // Add the clipboard pixels to the texture atlas
+    if (_textureAtlas->addImageFromPixels(newLayerName, _clipboard.width, _clipboard.height, _clipboard.pixels)) {
+        // Get UV coordinates for the new texture
+        auto uvRectOpt = _textureAtlas->getUVRect(newLayerName);
+        if (uvRectOpt) {
+            // Create a new layer
+            addLayer(newLayerName, _clipboard.width, _clipboard.height, 
+                    uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+
+            LOG_INFO("Created new layer '{}' from clipboard", newLayerName);
+        } else {
+            LOG_ERROR("Failed to get UV coordinates for pasted layer");
+        }
+    } else {
+        LOG_ERROR("Failed to add clipboard content to texture atlas");
+    }
 }
 
 void Gump::Application::setSelectedTool(const std::string &tool)
@@ -296,18 +481,18 @@ void Gump::Application::sendSelectionToNewLayer()
 
     // Get the top layer (last in the vector)
     auto& topLayer = _layers.back();
-    
+
     // Calculate selection bounds in layer space
     glm::vec2 selMin = _selectionState.getMin();
     glm::vec2 selMax = _selectionState.getMax();
-    
+
     // Clamp selection to layer bounds
     selMin = glm::max(selMin, glm::vec2(0.0f));
     selMax = glm::min(selMax, glm::vec2(topLayer->getWidth(), topLayer->getHeight()));
-    
+
     int selWidth = static_cast<int>(selMax.x - selMin.x);
     int selHeight = static_cast<int>(selMax.y - selMin.y);
-    
+
     if (selWidth <= 0 || selHeight <= 0) {
         LOG_WARNING("Invalid selection dimensions");
         return;
@@ -324,32 +509,32 @@ void Gump::Application::sendSelectionToNewLayer()
 
     // Read pixels from the GPU texture
     std::vector<unsigned char> pixels(selWidth * selHeight * 4);
-    
+
     glBindTexture(GL_TEXTURE_2D, *pageTexIdOpt);
-    
+
     // Get UV coordinates for the layer
     glm::vec2 layerUVMin = topLayer->getUVMin();
     glm::vec2 layerUVMax = topLayer->getUVMax();
-    
+
     // Calculate texture coordinates in pixels
     GLint texWidth, texHeight;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
-    
+
     // Convert layer UV to pixel coordinates
     int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
     int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
-    
+
     // Calculate selection position in texture
     int texX = layerTexX + static_cast<int>(selMin.x);
     int texY = layerTexY + static_cast<int>(selMin.y);
-    
+
     // Create a framebuffer to read from the texture
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *pageTexIdOpt, 0);
-    
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
         // Read pixels from the framebuffer
         glReadPixels(texX, texY, selWidth, selHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
@@ -359,29 +544,28 @@ void Gump::Application::sendSelectionToNewLayer()
         glDeleteFramebuffers(1, &fbo);
         return;
     }
-    
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
     // Don't flip - the pixels are already in the correct orientation
     // The UV coordinates in Layer already handle the Y-flip
-    
+
     // Create a unique name for the new layer
     std::string newLayerName = "Selection_" + std::to_string(_layers.size() + 1);
-    
+
     // Add the extracted pixels to the texture atlas (use pixels directly, not flipped)
     if (_textureAtlas->addImageFromPixels(newLayerName, selWidth, selHeight, pixels)) {
         // Get UV coordinates for the new texture
         auto uvRectOpt = _textureAtlas->getUVRect(newLayerName);
         if (uvRectOpt) {
             // Create a new layer at the selection position
-            addLayer(newLayerName, selWidth, selHeight, 
-                    uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
-            
+            addLayer(newLayerName, selWidth, selHeight,                     uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+
             // Position the new layer at the selection location
             auto& newLayer = _layers.back();
             // Note: Layer positioning would need to be implemented if layers support transforms
-            
+
             LOG_INFO("Created new layer '{}' from selection", newLayerName);
         } else {
             LOG_ERROR("Failed to get UV coordinates for new layer");

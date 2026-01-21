@@ -32,7 +32,23 @@ static void renderSelectionToolSettings(Gump::Application &app)
     bool isThereASelection = app.getSelectionState().hasSelection;
     bool isThereALayer = app.getLayerCount() > 0;
 
+    ImGui::BeginDisabled(!isThereALayer);
+
+    if (ImGui::Button("Paste selection")) {
+        app.pasteClipboard();
+    }
+
+    ImGui::EndDisabled();
+
     ImGui::BeginDisabled(!isThereASelection);
+
+    if (ImGui::Button("Copy selection")) {
+        app.copySelection();
+    }
+
+    if (ImGui::Button("Cut selection")) {
+        app.cutSelection();
+    }
 
     if (ImGui::Button("Clear selection")) {
         app.getSelectionState().hasSelection = false;
