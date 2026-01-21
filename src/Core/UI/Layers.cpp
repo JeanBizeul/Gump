@@ -34,17 +34,17 @@ void Gump::UI::renderLayers(Gump::Application &app) {
                 thumbnailSize = ImVec2(thumbSize * aspect, thumbSize);
             }
 
-            // Note: UV coordinates need to be flipped for ImGui (it expects top-left as min)
+            // ImGui uses standard UV coordinates (top-left is min, bottom-right is max)
+            // Our layer UVs are already set up correctly, just use them directly
             ImGui::Image(texId, thumbnailSize,
-                        ImVec2(uvMin.x, uvMax.y),  // Top-left UV
-                        ImVec2(uvMax.x, uvMin.y)); // Bottom-right UV
+                        ImVec2(uvMin.x, uvMin.y),  // Top-left UV
+                        ImVec2(uvMax.x, uvMax.y)); // Bottom-right UV
 
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Layer preview\n%zux%zu pixels", layer->getWidth(), layer->getHeight());
             }
             ImGui::SameLine();
         }
-
 
         // Layer name
         ImGui::InputText("##Name", &layer->name);
