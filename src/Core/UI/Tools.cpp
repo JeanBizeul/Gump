@@ -14,12 +14,17 @@ constexpr int Columns = 3; // Number of columns in the grid
 
 static void renderSelectionTool(Gump::Application &app);
 static void renderMoveTool(Gump::Application &app);
+static void renderFuzzySelectTool(Gump::Application &app);
 
 void Gump::UI::renderTools(Gump::Application &app) {
     ImGui::Begin("Tools");
 
+    ImGui::SameLine();
     renderMoveTool(app);
+    ImGui::SameLine();
     renderSelectionTool(app);
+    ImGui::SameLine();
+    renderFuzzySelectTool(app);
     ImGui::End();
 }
 
@@ -96,5 +101,43 @@ static void renderSelectionTool(Gump::Application &app) {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
     {
         ImGui::SetTooltip("Selection Tool\n Allow to select and manipulate parts of the canvas.");
+    }
+}
+
+static void renderFuzzySelectTool(Gump::Application &app)
+{
+    auto &atlas = app.getTextureAtlas();
+
+    std::optional<OpenGLUtils::UVEntry_t> uvEntryOpt = atlas.getUVRect("fuzzy-select-tool");
+
+    if (uvEntryOpt == std::nullopt) {
+        ImGui::Text("Fuzzy select tool icon not found in texture atlas.");
+        return;
+    }
+
+    OpenGLUtils::UVEntry_t uvEntry = uvEntryOpt.value();
+
+    ImVec2 uvMin = {uvEntry.uvMin.x, uvEntry.uvMin.y};
+    ImVec2 uvMax = {uvEntry.uvMax.x, uvEntry.uvMax.y};
+
+    std::optional<GLuint> textureIDOpt = atlas.getPageTextureID(uvEntry.pageIndex);
+    if (!textureIDOpt.has_value()) {
+        ImGui::Text("Failed to get texture ID for fuzzy select tool icon.");
+        return;
+    }
+
+    ImVec4 bgColor = (app.getSelectedTool() == "selection") ? SelectedBackgroundColor : BackgroundColor;
+
+    if (ImGui::ImageButton("##fuzzy-select",
+        (ImTextureRef)(size_t)textureIDOpt.value(),
+        IconSize,
+        uvMin,
+        uvMax,
+        bgColor)) {
+        app.setSelectedTool("fuzzy-select");
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+    {
+        ImGui::SetTooltip("Fuzzy Selection Tool\n Allow to select and manipulate parts of the canvas.");
     }
 }

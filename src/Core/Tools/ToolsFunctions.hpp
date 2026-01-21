@@ -16,6 +16,7 @@ extern std::unordered_map<std::string, std::function<void(Application &)>> Actio
 
 void UpdateMoveTool(Application &app);
 void UpdateSelectionTool(Application &app);
+void UpdateFuzzySelectionTool(Application &app);
 
 } // namespace Tools
 

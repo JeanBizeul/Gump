@@ -239,6 +239,11 @@ Gump::Camera2D& Gump::Application::getCamera()
     return *_camera;
 }
 
+Gump::FuzzySelectSettings& Gump::Application::getFuzzySelectSettings()
+{
+    return _fuzzySelectSettings;
+}
+
 void Gump::Application::copySelection()
 {
     if (!_selectionState.hasSelection || _layers.empty()) {

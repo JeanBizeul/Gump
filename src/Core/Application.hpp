@@ -38,6 +38,15 @@ struct Clipboard {
     std::vector<unsigned char> pixels;
 };
 
+struct FuzzySelectSettings {
+    float tolerance = 32.0f;          // Color similarity tolerance (0-255)
+    bool contiguous = true;            // Only select connected pixels
+    bool antiAlias = true;             // Smooth selection edges
+    bool sampleMerged = false;         // Sample from all visible layers
+    bool addToSelection = false;       // Add to existing selection (Shift)
+    bool subtractFromSelection = false; // Subtract from selection (Alt)
+};
+
 struct SelectionState {
     bool hasSelection = false;
     glm::vec2 startPos;
@@ -99,6 +108,9 @@ class Application
     SelectionState& getSelectionState();
     void updateSelectionMesh();
 
+    // Fuzzy select settings
+    FuzzySelectSettings& getFuzzySelectSettings();
+
     // Clipboard operations
     Clipboard& getClipboard();
     void copySelection();
@@ -118,6 +130,7 @@ class Application
 
     std::string _selectedTool = "move";
     SelectionState _selectionState;
+    FuzzySelectSettings _fuzzySelectSettings;
 
     float _time = 0.0f;
 

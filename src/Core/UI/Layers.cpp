@@ -3,6 +3,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/misc/cpp/imgui_stdlib.h"
+#include "Logger.hpp"
 
 #include "Application.hpp"
 
@@ -50,12 +51,9 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         {
             ImGui::SetTooltip("Right click for Layer settings");
         }
-        ImGui::OpenPopupOnItemClick("Layer settings", 1);
+        ImGui::OpenPopupOnItemClick(("Layer settings" + std::to_string(i)).c_str(), 1);
 
-        if (!popupOpen)
-            ImGui::SetNextWindowPos({ImGui::GetMousePos().x - 300, ImGui::GetMousePos().y - 75});
-
-        if (ImGui::BeginPopup("Layer settings")) {
+        if (ImGui::BeginPopup(("Layer settings" + std::to_string(i)).c_str())) {
             popupOpen = true;
 
             if (ImGui::InputText("Rename Layer", &layer->name, ImGuiInputTextFlags_EnterReturnsTrue)) {
@@ -67,24 +65,26 @@ void Gump::UI::renderLayers(Gump::Application &app) {
 
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255,100,100,255));
-            if (ImGui::Button("Close") || Input::isKeyPressed(GLFW_KEY_ESCAPE)) {
+            if (ImGui::Button(("Close" + std::to_string(i)).c_str()) || Input::isKeyPressed(GLFW_KEY_ESCAPE)) {
                 ImGui::CloseCurrentPopup();
                 popupOpen = false;
             }
             ImGui::PopStyleColor();
 
             ImGui::Separator();
+            LOG_DEBUG("A {}", i);
 
-            if (ImGui::Button("Delete Layer")) {
+            if (ImGui::Button(("Delete Layer" + std::to_string(i)).c_str())) {
+                LOG_DEBUG("Deleting layer {}", i);
                 app.getLayers().erase(app.getLayers().begin() + i);
                 popupOpen = false;
                 ImGui::EndPopup();
                 ImGui::End();
                 return; // Avoid going to bad layers ids
             }
-
+            LOG_DEBUG("B {}", i);
             ImGui::SameLine();
-            if (ImGui::Button("Reset Layer Transformations")) {
+            if (ImGui::Button(("Reset Layer Transformations" + std::to_string(i)).c_str())) {
                 layer->position = {0.0f, 0.0f};
                 layer->updateMesh();
             }
