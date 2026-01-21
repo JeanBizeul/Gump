@@ -9,6 +9,11 @@ set(CMAKE_C_STANDARD 17)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
+# On Linux, we need X11 for GLFW/ImGui
+if(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+endif()
+
 # --- Subdirectories ---
 add_subdirectory(vendor)
 add_subdirectory(src)
@@ -32,6 +37,11 @@ target_link_libraries(gump PRIVATE
     glfw
     OpenGL::GL
 )
+
+# Add X11 on Linux
+if(UNIX AND NOT APPLE)
+    target_link_libraries(gump PRIVATE X11::X11)
+endif()
 
 set_target_properties(gump PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/Debug

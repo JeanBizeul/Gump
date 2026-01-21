@@ -14,5 +14,7 @@ namespace UI {
     void renderToolSettings(Gump::Application &app);
     void renderBrushSettings(Gump::Application &app);
     void renderLayers(Gump::Application &app);
+    void renderResizeCanvasDialog(Gump::Application &app);
+    void renderManualResizeDialog(Gump::Application &app);
 }
 }

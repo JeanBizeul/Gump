@@ -10,7 +10,7 @@ int main() {
         Gump::Application app;
 
         app.run();
-    } catch (std::exception e) {
+    } catch (const std::exception& e) {
         LOG_FATAL("An error as occured while running the app: {}", e.what());
         return 84;
     }

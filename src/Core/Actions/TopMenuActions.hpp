@@ -15,6 +15,7 @@ std::expected<void, std::string> newFile(Application &app);
 std::expected<void, std::string> openFile(Application &app);
 std::expected<void, std::string> saveFile(Application &app);
 std::expected<void, std::string> exportFile(Application &app);
+std::expected<void, std::string> resizeCanva(Application &app);
 std::expected<void, std::string> exitApplication(Application &app);
 
 std::expected<void, std::string> undoAction(Application &app);

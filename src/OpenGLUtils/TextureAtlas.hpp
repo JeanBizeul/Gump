@@ -29,8 +29,9 @@ public:
         std::vector<unsigned char> pixels; // RGBA
     };
 
+    TextureAtlas();
+    // Create atlas with images from folder
     explicit TextureAtlas(const std::string &path);
-    TextureAtlas() = delete;
     TextureAtlas(const TextureAtlas &other) = delete;
     TextureAtlas &operator=(const TextureAtlas &other) = delete;
     ~TextureAtlas();
