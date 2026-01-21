@@ -146,7 +146,8 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
                         currentCanvasSize.x, currentCanvasSize.y);
                 } else {
                     // Image fits in current canvas, add layer directly
-                    std::string name = "L " + std::to_string(app.getLayerCount() + 1);
+                    std::string name = "L#" + std::to_string(app.getLayerCount() + 1) + " - "
+                        + std::filesystem::path(filepath).filename().string();
                     app.addLayer(name,
                         static_cast<size_t>(imageData.width),
                         static_cast<size_t>(imageData.height),
