@@ -7,7 +7,6 @@
 #include "Window.hpp"
 
 #include "Layer.hpp"
-
 #include "Mesh.hpp"
 #include "Shader.hpp"
 #include "TextureAtlas.hpp"
@@ -30,6 +29,25 @@ struct PendingImport {
 
 struct ResizeCanvasRequest {
     bool isRequested = false;
+};
+
+struct SelectionState {
+    bool hasSelection = false;
+    glm::vec2 startPos;
+    glm::vec2 endPos;
+    glm::vec2 offset{0.0f, 0.0f}; // For moving the selection
+
+    glm::vec2 getMin() const {
+        return glm::vec2(glm::min(startPos.x, endPos.x), glm::min(startPos.y, endPos.y));
+    }
+
+    glm::vec2 getMax() const {
+        return glm::vec2(glm::max(startPos.x, endPos.x), glm::max(startPos.y, endPos.y));
+    }
+
+    glm::vec2 getSize() const {
+        return getMax() - getMin();
+    }
 };
 
 class Application
@@ -69,6 +87,12 @@ class Application
     void setSelectedTool(const std::string& tool);
     const std::string& getSelectedTool() const;
 
+    // Selection management
+    SelectionState& getSelectionState();
+    Camera2D& getCamera();
+    glm::vec2 screenToWorld(const glm::vec2& screenPos) const;
+    void updateSelectionMesh();
+
  private:
     bool _running = true;
     glm::uvec2 _windowSize;
@@ -77,6 +101,9 @@ class Application
     ResizeCanvasRequest _resizeCanvasRequest;
 
     std::string _selectedTool = "move";
+    SelectionState _selectionState;
+
+    float _time = 0.0f;
 
     std::unique_ptr<OpenGLUtils::Window> _window;
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
@@ -86,6 +113,7 @@ class Application
     std::unique_ptr<OpenGLUtils::Shader> _checkerboardShader;
     std::unique_ptr<OpenGLUtils::Mesh> _checkerboardMesh;
     std::unique_ptr<Camera2D> _camera;
+    std::unique_ptr<OpenGLUtils::Mesh> _selectionMesh;
 
     void update();
     void render();

@@ -10,6 +10,8 @@
 
 #include "UI/UI.hpp"
 
+#include "Tools/ToolsFunctions.hpp"
+
 const size_t WindowWidth = 1680;
 const size_t WindowHeight = 980;
 const std::string_view WindowName = "Gump";
@@ -33,6 +35,10 @@ Gump::Application::Application()
             "shaders/checkerboard.vert",
             "shaders/checkerboard.frag"
         );
+        _selectionShader = std::make_unique<OpenGLUtils::Shader>(
+            "shaders/selection.vert",
+            "shaders/selection.frag"
+        );
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
 
@@ -46,7 +52,13 @@ Gump::Application::Application()
 
 void Gump::Application::run()
 {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     while (_running) {
+        // Update time
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        _time = std::chrono::duration<float>(currentTime - startTime).count();
+
         _window->pollEvents();
         update();
 
@@ -76,6 +88,12 @@ void Gump::Application::update()
     if (Input::getMouseScrollDelta().y != 0.0f) {
         _camera->zoom(1.0f + Input::getMouseScrollDelta().y * 0.1f);
     }
+
+    try {
+        Tools::ActionFunction.at(_selectedTool)(*this);
+    } catch (const std::out_of_range& e) {
+        LOG_ERROR("No such tool registered: {}", _selectedTool);
+    }
 }
 
 void Gump::Application::render()
@@ -101,6 +119,21 @@ void Gump::Application::render()
         _shader->set("uTexture", 0);
         _shader->set("uTransparency", layer->transparency);
         layer->draw();
+    }
+
+    // Render selection overlay
+    if (_selectionState.hasSelection && _selectionMesh) {
+        _selectionShader->use();
+        _selectionShader->set("uProjectionView", pv);
+        _selectionShader->set("uTime", _time);
+
+        // Pass selection size to shader
+        glm::vec2 selectionSize = _selectionState.getSize();
+        _selectionShader->set("uSelectionSize", selectionSize);
+        _selectionShader->set("uBorderWidth", (1 / _camera->getZoom()) * 5.0f); // Border width scales with zoom
+
+        _selectionMesh->bind();
+        _selectionMesh->draw();
     }
 }
 
@@ -185,6 +218,43 @@ Gump::ResizeCanvasRequest& Gump::Application::getResizeCanvasRequest()
     return _resizeCanvasRequest;
 }
 
+Gump::SelectionState& Gump::Application::getSelectionState()
+{
+    return _selectionState;
+}
+
+Gump::Camera2D& Gump::Application::getCamera()
+{
+    return *_camera;
+}
+
+glm::vec2 Gump::Application::screenToWorld(const glm::vec2& screenPos) const
+{
+    // Get viewport dimensions
+    GLint vp[4] = {0, 0, 0, 0};
+    glGetIntegerv(GL_VIEWPORT, vp);
+    float width = static_cast<float>(vp[2]);
+    float height = static_cast<float>(vp[3]);
+
+    // Convert screen coordinates to OpenGL coordinates
+    // Screen Y is top-down, OpenGL Y is bottom-up
+    glm::vec2 glPos;
+    glPos.x = screenPos.x;
+    glPos.y = height - screenPos.y;
+
+    // Reverse the camera transformations (inverse of getViewMatrix):
+    // 1. Subtract half screen to get centered coordinates
+    glm::vec2 worldPos = glPos - glm::vec2(width * 0.5f, height * 0.5f);
+
+    // 2. Reverse zoom (divide by zoom)
+    worldPos /= _camera->getZoom();
+
+    // 3. Add camera position (reverse the -position translation)
+    worldPos += _camera->getPosition();
+
+    return worldPos;
+}
+
 void Gump::Application::setSelectedTool(const std::string &tool)
 {
     _selectedTool = tool;
@@ -211,4 +281,34 @@ void Gump::Application::updateCheckerboardMesh()
     };
 
     _checkerboardMesh = std::make_unique<OpenGLUtils::Mesh>(vertices, indices);
+}
+
+void Gump::Application::updateSelectionMesh()
+{
+    if (!_selectionState.hasSelection) {
+        _selectionMesh.reset();
+        return;
+    }
+
+    LOG_DEBUG("Updating selection mesh ...");
+    LOG_DEBUG("From : x{}, y{}  to  x{}, y{}  with offset  x{}, y{}",
+        _selectionState.getMin().x, _selectionState.getMin().y,
+        _selectionState.getMax().x, _selectionState.getMax().y,
+        _selectionState.offset.x, _selectionState.offset.y);
+    glm::vec2 min = _selectionState.getMin() + _selectionState.offset;
+    glm::vec2 max = _selectionState.getMax() + _selectionState.offset;
+
+    const std::vector<unsigned int> indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    const std::vector<OpenGLUtils::Vertex_t> vertices = {
+        { { min.x, min.y, 0.0f }, { 0.0f, 0.0f } }, // top-left
+        { { max.x, min.y, 0.0f }, { 1.0f, 0.0f } }, // top-right
+        { { max.x, max.y, 0.0f }, { 1.0f, 1.0f } }, // bottom-right
+        { { min.x, max.y, 0.0f }, { 0.0f, 1.0f } }  // bottom-left
+    };
+
+    _selectionMesh = std::make_unique<OpenGLUtils::Mesh>(vertices, indices);
 }
