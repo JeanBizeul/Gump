@@ -40,11 +40,18 @@ Gump::Application::Application()
             "shaders/selection.vert",
             "shaders/selection.frag"
         );
+        _maskedSelectionShader = std::make_unique<OpenGLUtils::Shader>(
+            "shaders/masked_selection.vert",
+            "shaders/masked_selection.frag"
+        );
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
 
         // Initialize checkerboard mesh
         updateCheckerboardMesh();
+        
+        // Initialize selection mask texture
+        glGenTextures(1, &_selectionMaskTexture);
     } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -129,17 +136,37 @@ void Gump::Application::render()
 
     // Render selection overlay
     if (_selectionState.hasSelection && _selectionMesh) {
-        _selectionShader->use();
-        _selectionShader->set("uProjectionView", pv);
-        _selectionShader->set("uTime", _time);
+        // Use masked selection shader if we have a pixel mask
+        if (_selectionState.hasMask) {
+            _maskedSelectionShader->use();
+            _maskedSelectionShader->set("uProjectionView", pv);
+            _maskedSelectionShader->set("uTime", _time);
+            _maskedSelectionShader->set("uBorderWidth", (1 / _camera->getZoom()) * 5.0f);
+            
+            // Bind the mask texture
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _selectionMaskTexture);
+            _maskedSelectionShader->set("uMaskTexture", 0);
+            
+            // Pass mask size
+            _maskedSelectionShader->set("uMaskSize", glm::vec2(_selectionState.maskWidth, _selectionState.maskHeight));
+            
+            _selectionMesh->bind();
+            _selectionMesh->draw();
+        } else {
+            // Use regular selection shader for rectangular selections
+            _selectionShader->use();
+            _selectionShader->set("uProjectionView", pv);
+            _selectionShader->set("uTime", _time);
 
-        // Pass selection size to shader
-        glm::vec2 selectionSize = _selectionState.getSize();
-        _selectionShader->set("uSelectionSize", selectionSize);
-        _selectionShader->set("uBorderWidth", (1 / _camera->getZoom()) * 5.0f); // Border width scales with zoom
+            // Pass selection size to shader
+            glm::vec2 selectionSize = _selectionState.getSize();
+            _selectionShader->set("uSelectionSize", selectionSize);
+            _selectionShader->set("uBorderWidth", (1 / _camera->getZoom()) * 5.0f);
 
-        _selectionMesh->bind();
-        _selectionMesh->draw();
+            _selectionMesh->bind();
+            _selectionMesh->draw();
+        }
     }
 }
 
@@ -475,6 +502,35 @@ void Gump::Application::updateSelectionMesh()
     };
 
     _selectionMesh = std::make_unique<OpenGLUtils::Mesh>(vertices, indices);
+    
+    // Update mask texture if we have a pixel mask
+    if (_selectionState.hasMask) {
+        updateSelectionMaskTexture();
+    }
+}
+
+void Gump::Application::updateSelectionMaskTexture()
+{
+    if (!_selectionState.hasMask || _selectionState.mask.empty()) {
+        return;
+    }
+
+    // Convert boolean mask to byte texture (0 or 255)
+    std::vector<unsigned char> maskTexture(_selectionState.maskWidth * _selectionState.maskHeight);
+    for (size_t i = 0; i < _selectionState.mask.size(); i++) {
+        maskTexture[i] = _selectionState.mask[i] ? 255 : 0;
+    }
+
+    // Upload to GPU
+    glBindTexture(GL_TEXTURE_2D, _selectionMaskTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 
+                 _selectionState.maskWidth, _selectionState.maskHeight, 
+                 0, GL_RED, GL_UNSIGNED_BYTE, maskTexture.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Gump::Application::sendSelectionToNewLayer()

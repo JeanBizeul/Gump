@@ -53,6 +53,13 @@ struct SelectionState {
     glm::vec2 endPos;
     glm::vec2 offset{0.0f, 0.0f}; // For moving the selection
 
+    // Fuzzy selection data
+    bool hasMask = false;              // Whether we have a pixel mask
+    std::vector<bool> mask;            // Pixel-level selection mask
+    int maskWidth = 0;                 // Width of the mask
+    int maskHeight = 0;                // Height of the mask
+    glm::vec2 maskOrigin{0.0f, 0.0f}; // Top-left position of the mask in world space
+
     glm::vec2 getMin() const {
         return glm::vec2(glm::min(startPos.x, endPos.x), glm::min(startPos.y, endPos.y));
     }
@@ -63,6 +70,13 @@ struct SelectionState {
 
     glm::vec2 getSize() const {
         return getMax() - getMin();
+    }
+
+    void clearMask() {
+        hasMask = false;
+        mask.clear();
+        maskWidth = 0;
+        maskHeight = 0;
     }
 };
 
@@ -139,13 +153,18 @@ class Application
     std::vector<std::unique_ptr<Layer>> _layers;
     std::unique_ptr<OpenGLUtils::Shader> _shader;
     std::unique_ptr<OpenGLUtils::Shader> _selectionShader;
+    std::unique_ptr<OpenGLUtils::Shader> _maskedSelectionShader;
     std::unique_ptr<OpenGLUtils::Shader> _checkerboardShader;
     std::unique_ptr<OpenGLUtils::Mesh> _checkerboardMesh;
     std::unique_ptr<Camera2D> _camera;
     std::unique_ptr<OpenGLUtils::Mesh> _selectionMesh;
+    
+    // Selection mask texture for fuzzy select
+    GLuint _selectionMaskTexture = 0;
 
     void update();
     void render();
     void updateCheckerboardMesh();
+    void updateSelectionMaskTexture();
 };
 }

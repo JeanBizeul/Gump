@@ -57,6 +57,7 @@ static void renderSelectionToolSettings(Gump::Application &app)
 
     if (ImGui::Button("Clear selection")) {
         app.getSelectionState().hasSelection = false;
+        app.getSelectionState().clearMask();
         app.updateSelectionMesh();
     }
 
