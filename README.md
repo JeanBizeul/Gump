@@ -1,5 +1,9 @@
 The full documentation of this project is available online at https://jeanbizeul.github.io/Gump/.
 
+# Resources used
+
+https://www.flaticon.com/free-icons/
+
 # Gump Setup Guide
 
 ## Windows Setup

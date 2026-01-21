@@ -160,6 +160,27 @@ bool TextureAtlas::addImageFromFile(const std::string &filePath)
     return addImage(name, imgData);
 }
 
+bool TextureAtlas::addImageFromPixels(const std::string &name, int width, int height, const std::vector<unsigned char>& pixels)
+{
+    if (pixels.size() != static_cast<size_t>(width * height * 4))
+    {
+        LOG_ERROR("Invalid pixel data size for image '{}'", name);
+        return false;
+    }
+
+    // Create ImageData_s from the pixel data
+    ImageData_s imgData;
+    imgData.width = width;
+    imgData.height = height;
+    imgData.lastModified = 0;
+    imgData.pixels = pixels;
+
+    // Add to cache
+    _imageDataCache[name] = imgData;
+
+    // Add image to atlas
+    return addImage(name, imgData);
+}
 
 void TextureAtlas::packAllImages(const std::unordered_map<std::string, ImageData_s>& imgs)
 {
@@ -264,6 +285,16 @@ std::optional<UVEntry_t> TextureAtlas::getUVRect(const std::string &blockName) c
     if (it == _uvMap.end()) 
         return std::nullopt;
     return it->second;
+}
+
+std::optional<unsigned int> OpenGLUtils::TextureAtlas::getPageTextureID(int pageIndex) const
+{
+    try {
+        return _pages.at(pageIndex).textureId;
+    } catch (const std::out_of_range& e) {
+        LOG_ERROR("Requested page index {} out of bounds: {}", pageIndex, e.what());
+        return std::nullopt;
+    }
 }
 
 std::optional<std::reference_wrapper<const TextureAtlas::ImageData_s>>

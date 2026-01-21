@@ -45,6 +45,8 @@ public:
     // Get UV for a given image name
     std::optional<UVEntry_t> getUVRect(const std::string &blockName) const;
 
+    std::optional<unsigned int> getPageTextureID(int pageIndex) const;
+
     std::optional<std::reference_wrapper<const ImageData_s>> getImageData(const std::string &blockName) const;
 
     // Total number of atlas pages
@@ -52,6 +54,9 @@ public:
 
     // Add one image dynamically
     bool addImageFromFile(const std::string &filePath);
+
+    // Add image from raw pixel data
+    bool addImageFromPixels(const std::string &name, int width, int height, const std::vector<unsigned char>& pixels);
 
     void dumpAtlas(const std::string &outputFile) const; // TEMPORARY  debug function
 
