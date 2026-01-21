@@ -13,7 +13,7 @@
 const size_t WindowWidth = 1680;
 const size_t WindowHeight = 980;
 const std::string_view WindowName = "Gump";
-const std::string TexturesFolderPath = "assets/textures/";
+const std::string TexturesFolderPath = "assets/";
 
 Gump::Application::Application()
     : _windowSize(WindowWidth, WindowHeight)
