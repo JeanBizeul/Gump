@@ -16,7 +16,7 @@ const std::string_view WindowName = "Gump";
 const std::string TexturesFolderPath = "assets/textures/";
 
 Gump::Application::Application()
-    : _windowSize(WindowWidth, WindowHeight)
+    : _windowSize(WindowWidth, WindowHeight), _canvasSize(800, 600)
 {
     try {
         LOG_DEBUG("Creating window ...");
@@ -29,8 +29,15 @@ Gump::Application::Application()
             "shaders/canva.vert",
             "shaders/canva.frag"
         );
+        _checkerboardShader = std::make_unique<OpenGLUtils::Shader>(
+            "shaders/checkerboard.vert",
+            "shaders/checkerboard.frag"
+        );
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
+        
+        // Initialize checkerboard mesh
+        updateCheckerboardMesh();
     } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -75,6 +82,16 @@ void Gump::Application::render()
 {
     glm::mat4 pv = _camera->getPVMatrix();
 
+    // Render checkerboard background first
+    _checkerboardShader->use();
+    _checkerboardShader->set("uProjectionView", pv);
+    _checkerboardShader->set("uCanvasSize", glm::vec2(_canvasSize.x, _canvasSize.y));
+    if (_checkerboardMesh) {
+        _checkerboardMesh->bind();
+        _checkerboardMesh->draw();
+    }
+
+    // Render layers on top
     _shader->use();
     _shader->set("uProjectionView", pv);
 
@@ -144,4 +161,38 @@ OpenGLUtils::TextureAtlas &Gump::Application::getTextureAtlas()
 glm::uvec2 Gump::Application::getWindowSize() const
 {
     return _windowSize;
+}
+
+glm::uvec2 Gump::Application::getCanvasSize() const
+{
+    return _canvasSize;
+}
+
+void Gump::Application::setCanvasSize(glm::uvec2 size)
+{
+    _canvasSize = size;
+    updateCheckerboardMesh();
+}
+
+Gump::PendingImport& Gump::Application::getPendingImport()
+{
+    return _pendingImport;
+}
+
+void Gump::Application::updateCheckerboardMesh()
+{
+    const std::vector<unsigned int> indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    const std::vector<OpenGLUtils::Vertex_t> vertices = {
+        // Position                                    // UVs (unused for checkerboard)
+        { { 0.0f,              0.0f,              0.0f }, { 0.0f, 0.0f } }, // top-left
+        { { (float)_canvasSize.x, 0.0f,              0.0f }, { 1.0f, 0.0f } }, // top-right
+        { { (float)_canvasSize.x, (float)_canvasSize.y, 0.0f }, { 1.0f, 1.0f } }, // bottom-right
+        { { 0.0f,              (float)_canvasSize.y, 0.0f }, { 0.0f, 1.0f } }  // bottom-left
+    };
+
+    _checkerboardMesh = std::make_unique<OpenGLUtils::Mesh>(vertices, indices);
 }
