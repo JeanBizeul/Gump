@@ -37,3 +37,15 @@ void Layer::draw() const {
     _mesh->bind();
     _mesh->draw();
 }
+
+void Layer::updateMesh() {
+    const std::vector<OpenGLUtils::Vertex_t> vertices = {
+           // Position                                    // UVs
+        { { position.x,         position.y,          0.0f }, { _uvMin.x, _uvMax.y } }, // top-left
+        { { position.x + (float)_width, position.y,          0.0f }, { _uvMax.x, _uvMax.y } }, // top-right
+        { { position.x + (float)_width, position.y + (float)_height, 0.0f }, { _uvMax.x, _uvMin.y } }, // bottom-right
+        { { position.x,         position.y + (float)_height, 0.0f }, { _uvMin.x, _uvMin.y } }  // bottom-left
+    };
+
+    _mesh = std::make_unique<OpenGLUtils::Mesh>(vertices, Indices);
+}

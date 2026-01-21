@@ -23,8 +23,10 @@ public:
     float transparency = 1.0f;
     bool isVisible = true;
     std::string name;
+    glm::vec2 position{0.0f, 0.0f}; // Layer position offset
 
     OpenGLUtils::Mesh* getMesh() const { return _mesh.get(); }
+    void updateMesh(); // Recreate mesh with current position
 
     const size_t texturePageIndex;
 
