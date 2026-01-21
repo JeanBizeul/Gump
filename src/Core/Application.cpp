@@ -180,6 +180,11 @@ Gump::PendingImport& Gump::Application::getPendingImport()
     return _pendingImport;
 }
 
+Gump::ResizeCanvasRequest& Gump::Application::getResizeCanvasRequest()
+{
+    return _resizeCanvasRequest;
+}
+
 void Gump::Application::updateCheckerboardMesh()
 {
     const std::vector<unsigned int> indices = {

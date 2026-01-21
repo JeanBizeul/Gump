@@ -36,6 +36,18 @@ void Gump::UI::renderTopMenu(Application &app)
                     LOG_ERROR("Failed to export file: {}", result.error());
                 }
             }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Resize canva")) {
+                auto result = Gump::Actions::TopMenu::resizeCanva(app);
+                if (!result) {
+                    LOG_ERROR("Failed to resize canva: {}", result.error());
+                }
+            }
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem("Exit")) {
                 auto result = Gump::Actions::TopMenu::exitApplication(app);
                 if (!result) {
@@ -44,7 +56,7 @@ void Gump::UI::renderTopMenu(Application &app)
             }
             ImGui::EndMenu();
         }
-        
+
         if (ImGui::BeginMenu("Edit")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
                 auto result = Gump::Actions::TopMenu::undoAction(app);
@@ -60,7 +72,7 @@ void Gump::UI::renderTopMenu(Application &app)
             }
 
             ImGui::Separator();
-            
+
             if (ImGui::MenuItem("Cut", "Ctrl+X")) {
                 auto result = Gump::Actions::TopMenu::cutAction(app);
                 if (!result) {
@@ -95,7 +107,7 @@ void Gump::UI::renderTopMenu(Application &app)
 
         if (ImGui::BeginMenu("Help")) {
             if (ImGui::MenuItem("About")) {
-                
+
             }
             ImGui::EndMenu();
         }

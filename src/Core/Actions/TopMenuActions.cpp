@@ -4,6 +4,7 @@
 #include "Utils/Utils.hpp"
 
 #include "Logger.hpp"
+#include "TopMenuActions.hpp"
 
 using namespace Gump;
 
@@ -56,6 +57,13 @@ std::expected<void, std::string> Actions::TopMenu::exportFile(Application &app)
         filepath = ensureExtension(filepath, ".png");
      Utils::exportPNG(filepath, app.getLayers(), app.getShader(), app.getTextureAtlas(), app.getWindowSize());
     }
+    return {};
+}
+
+std::expected<void, std::string> Gump::Actions::TopMenu::resizeCanva(Application &app)
+{
+    LOG_DEBUG("Action: Resize Canvas");
+    app.getResizeCanvasRequest().isRequested = true;
     return {};
 }
 

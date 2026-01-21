@@ -28,6 +28,10 @@ struct PendingImport {
     glm::uvec2 suggestedCanvasSize;
 };
 
+struct ResizeCanvasRequest {
+    bool isRequested = false;
+};
+
 class Application
 {
  public:
@@ -58,12 +62,16 @@ class Application
     
     // Pending import
     PendingImport& getPendingImport();
+    
+    // Manual canvas resize
+    ResizeCanvasRequest& getResizeCanvasRequest();
 
  private:
     bool _running = true;
     glm::uvec2 _windowSize;
     glm::uvec2 _canvasSize;
     PendingImport _pendingImport;
+    ResizeCanvasRequest _resizeCanvasRequest;
 
     std::unique_ptr<OpenGLUtils::Window> _window;
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
