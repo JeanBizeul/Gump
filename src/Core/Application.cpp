@@ -12,8 +12,8 @@
 
 #include "Tools/ToolsFunctions.hpp"
 
-const size_t WindowWidth = 1680;
-const size_t WindowHeight = 980;
+const size_t WindowWidth = 1920;
+const size_t WindowHeight = 1080;
 const std::string_view WindowName = "Gump";
 const std::string TexturesFolderPath = "assets/";
 
@@ -98,7 +98,12 @@ void Gump::Application::update()
 
 void Gump::Application::render()
 {
-    glm::mat4 pv = _camera->getPVMatrix();
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    float width  = static_cast<float>(vp[2]);
+    float height = static_cast<float>(vp[3]);
+
+    glm::mat4 pv = _camera->getPVMatrix(width, height);
 
     // Render checkerboard background first
     _checkerboardShader->use();
@@ -228,33 +233,6 @@ Gump::Camera2D& Gump::Application::getCamera()
     return *_camera;
 }
 
-glm::vec2 Gump::Application::screenToWorld(const glm::vec2& screenPos) const
-{
-    // Get viewport dimensions
-    GLint vp[4] = {0, 0, 0, 0};
-    glGetIntegerv(GL_VIEWPORT, vp);
-    float width = static_cast<float>(vp[2]);
-    float height = static_cast<float>(vp[3]);
-
-    // Convert screen coordinates to OpenGL coordinates
-    // Screen Y is top-down, OpenGL Y is bottom-up
-    glm::vec2 glPos;
-    glPos.x = screenPos.x;
-    glPos.y = height - screenPos.y;
-
-    // Reverse the camera transformations (inverse of getViewMatrix):
-    // 1. Subtract half screen to get centered coordinates
-    glm::vec2 worldPos = glPos - glm::vec2(width * 0.5f, height * 0.5f);
-
-    // 2. Reverse zoom (divide by zoom)
-    worldPos /= _camera->getZoom();
-
-    // 3. Add camera position (reverse the -position translation)
-    worldPos += _camera->getPosition();
-
-    return worldPos;
-}
-
 void Gump::Application::setSelectedTool(const std::string &tool)
 {
     _selectedTool = tool;
@@ -290,11 +268,6 @@ void Gump::Application::updateSelectionMesh()
         return;
     }
 
-    LOG_DEBUG("Updating selection mesh ...");
-    LOG_DEBUG("From : x{}, y{}  to  x{}, y{}  with offset  x{}, y{}",
-        _selectionState.getMin().x, _selectionState.getMin().y,
-        _selectionState.getMax().x, _selectionState.getMax().y,
-        _selectionState.offset.x, _selectionState.offset.y);
     glm::vec2 min = _selectionState.getMin() + _selectionState.offset;
     glm::vec2 max = _selectionState.getMax() + _selectionState.offset;
 

@@ -47,12 +47,48 @@ glm::mat4 Camera2D::getProjectionMatrix(float width, float height) const {
     return glm::ortho(0.0f, width, 0.0f, height, -1.0f, 1.0f);
 }
 
-glm::mat4 Camera2D::getPVMatrix() const {
-    // Query current GL viewport (requires a current GL context)
-    GLint vp[4] = {0, 0, 0, 0};
-    glGetIntegerv(GL_VIEWPORT, vp);
-    float width  = static_cast<float>(vp[2]);
-    float height = static_cast<float>(vp[3]);
-
+glm::mat4 Camera2D::getPVMatrix(float width, float height) const {
     return getProjectionMatrix(width, height) * getViewMatrix(width, height);
+}
+
+glm::vec2 Gump::Camera2D::screenToWorld(glm::vec2 screenPos, glm::vec2 viewportSize) const
+{
+    float width  = viewportSize.x;
+    float height = viewportSize.y;
+    screenPos.y = height - screenPos.y; // Invert Y for OpenGL coordinates
+
+    glm::mat4 pv = getPVMatrix(width, height);
+
+    glm::mat4 invPV = glm::inverse(pv);
+
+    // Screen → NDC
+    glm::vec4 ndc;
+    ndc.x = (screenPos.x / width) * 2.0f - 1.0f;
+    ndc.y = (screenPos.y / height) * 2.0f - 1.0f;
+    ndc.z = 0.0f;
+    ndc.w = 1.0f;
+
+    glm::vec4 world = invPV * ndc;
+
+    return glm::vec2(world);
+}
+
+glm::vec2 Gump::Camera2D::worldToScreen(glm::vec2 worldPos, glm::vec2 viewportSize) const
+{
+    float width  = viewportSize.x;
+    float height = viewportSize.y;
+
+    glm::mat4 pv = getPVMatrix(width, height);
+
+    glm::vec4 clip = pv * glm::vec4(worldPos, 0.0f, 1.0f);
+
+    // Perspective divide (technically unnecessary for ortho, but correct)
+    glm::vec3 ndc = glm::vec3(clip) / clip.w;
+
+    // NDC [-1,1] → screen [0,width/height]
+    glm::vec2 screen;
+    screen.x = (ndc.x * 0.5f + 0.5f) * width;
+    screen.y = (ndc.y * 0.5f + 0.5f) * height;
+
+    return screen;
 }

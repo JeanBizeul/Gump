@@ -12,16 +12,20 @@ class Camera2D {
     void setPosition(const glm::vec2& pos);
 
     // Zoom
-    void setZoom(float zoom);
     void zoom(float factor);
+    void setZoom(float zoom);
 
     // Getters
     glm::vec2 getPosition() const;
     float getZoom() const;
 
     // Matrices
-    glm::mat4 getPVMatrix() const;
-    
+    glm::mat4 getPVMatrix(float width, float height) const;
+
+    glm::vec2 screenToWorld(glm::vec2 screenPos, glm::vec2 viewportSize) const;
+    glm::vec2 worldToScreen(glm::vec2 worldPos, glm::vec2 viewportSize) const;
+
+
  private:
     glm::vec2 _position;
     float _zoom;

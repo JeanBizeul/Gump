@@ -73,6 +73,7 @@ class Application
     OpenGLUtils::TextureAtlas &getTextureAtlas();
 
     glm::uvec2 getWindowSize() const;
+    Camera2D& getCamera();
 
     // Canvas management
     glm::uvec2 getCanvasSize() const;
@@ -89,8 +90,6 @@ class Application
 
     // Selection management
     SelectionState& getSelectionState();
-    Camera2D& getCamera();
-    glm::vec2 screenToWorld(const glm::vec2& screenPos) const;
     void updateSelectionMesh();
 
  private:
