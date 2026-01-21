@@ -17,6 +17,44 @@ void Gump::UI::renderLayers(Gump::Application &app) {
     for (size_t i = 0; i < app.getLayerCount(); i++) {
         Layer* layer = &app.getLayer(i);
 
+        // Layer thumbnail preview
+        auto texIdOpt = app.getTextureAtlas().getPageTextureID(layer->texturePageIndex);
+        if (texIdOpt) {
+            ImTextureID texId = (ImTextureID)(intptr_t)(*texIdOpt);
+            glm::vec2 uvMin = layer->getUVMin();
+            glm::vec2 uvMax = layer->getUVMax();
+
+            // Calculate thumbnail size (maintain aspect ratio, max 48px)
+            float thumbSize = 48.0f;
+            float aspect = (float)layer->getWidth() / (float)layer->getHeight();
+            ImVec2 thumbnailSize;
+
+            if (aspect > 1.0f) {
+                thumbnailSize = ImVec2(thumbSize, thumbSize / aspect);
+            } else {
+                thumbnailSize = ImVec2(thumbSize * aspect, thumbSize);
+            }
+
+            // Note: UV coordinates need to be flipped for ImGui (it expects top-left as min)
+            ImGui::Image(texId, thumbnailSize,
+                        ImVec2(uvMin.x, uvMax.y),  // Top-left UV
+                        ImVec2(uvMax.x, uvMin.y)); // Bottom-right UV
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Layer preview\n%zux%zu pixels", layer->getWidth(), layer->getHeight());
+            }
+            ImGui::SameLine();
+        }
+
+
+        // Layer name
+        ImGui::Text("%s", layer->name.c_str());
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Right click for Layer settings");
+        }
+        ImGui::OpenPopupOnItemClick(("Layer settings" + std::to_string(i)).c_str(), 1);
+
         // Move up button
         if (!app.canLayerMoveUp(i)) {
             ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -44,15 +82,6 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::PopStyleVar();
         }
 
-        // Layer name
-        ImGui::SameLine();
-        ImGui::Text("%s", layer->name.c_str());
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("Right click for Layer settings");
-        }
-        ImGui::OpenPopupOnItemClick(("Layer settings" + std::to_string(i)).c_str(), 1);
-
         if (ImGui::BeginPopup(("Layer settings" + std::to_string(i)).c_str())) {
             popupOpen = true;
 
@@ -72,17 +101,14 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::PopStyleColor();
 
             ImGui::Separator();
-            LOG_DEBUG("A {}", i);
 
             if (ImGui::Button(("Delete Layer" + std::to_string(i)).c_str())) {
-                LOG_DEBUG("Deleting layer {}", i);
                 app.getLayers().erase(app.getLayers().begin() + i);
                 popupOpen = false;
                 ImGui::EndPopup();
                 ImGui::End();
                 return; // Avoid going to bad layers ids
             }
-            LOG_DEBUG("B {}", i);
             ImGui::SameLine();
             if (ImGui::Button(("Reset Layer Transformations" + std::to_string(i)).c_str())) {
                 layer->position = {0.0f, 0.0f};
