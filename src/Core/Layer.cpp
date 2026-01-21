@@ -17,7 +17,8 @@ const std::vector<unsigned int> Indices = {
 
 Layer::Layer(const std::string &name, size_t width, size_t height,
     glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
-    : name(name), _width(width), _height(height), texturePageIndex(textureID)
+    : name(name), _width(width), _height(height), texturePageIndex(textureID),
+      _uvMin(uvMin), _uvMax(uvMax)
 {
     const std::vector<OpenGLUtils::Vertex_t> vertices = {
            // Position                            // UVs

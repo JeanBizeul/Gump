@@ -92,6 +92,9 @@ class Application
     SelectionState& getSelectionState();
     void updateSelectionMesh();
 
+    // Extract pixels from selection and create a new layer
+    void sendSelectionToNewLayer();
+
  private:
     bool _running = true;
     glm::uvec2 _windowSize;

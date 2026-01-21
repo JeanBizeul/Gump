@@ -160,6 +160,27 @@ bool TextureAtlas::addImageFromFile(const std::string &filePath)
     return addImage(name, imgData);
 }
 
+bool TextureAtlas::addImageFromPixels(const std::string &name, int width, int height, const std::vector<unsigned char>& pixels)
+{
+    if (pixels.size() != static_cast<size_t>(width * height * 4))
+    {
+        LOG_ERROR("Invalid pixel data size for image '{}'", name);
+        return false;
+    }
+
+    // Create ImageData_s from the pixel data
+    ImageData_s imgData;
+    imgData.width = width;
+    imgData.height = height;
+    imgData.lastModified = 0;
+    imgData.pixels = pixels;
+
+    // Add to cache
+    _imageDataCache[name] = imgData;
+
+    // Add image to atlas
+    return addImage(name, imgData);
+}
 
 void TextureAtlas::packAllImages(const std::unordered_map<std::string, ImageData_s>& imgs)
 {

@@ -55,6 +55,9 @@ public:
     // Add one image dynamically
     bool addImageFromFile(const std::string &filePath);
 
+    // Add image from raw pixel data
+    bool addImageFromPixels(const std::string &name, int width, int height, const std::vector<unsigned char>& pixels);
+
     void dumpAtlas(const std::string &outputFile) const; // TEMPORARY  debug function
 
 private:
