@@ -24,14 +24,14 @@ Gump::Application::Application()
         LOG_DEBUG("Creating camera ...");
         _camera = std::make_unique<Camera2D>();
         LOG_DEBUG("Loading assets ...");
-        _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>(TexturesFolderPath);
+        _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>();
         _shader = std::make_unique<OpenGLUtils::Shader>(
             "shaders/canva.vert",
             "shaders/canva.frag"
         );
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
-    } catch (std::exception e) {
+    } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
     }
@@ -42,13 +42,13 @@ void Gump::Application::run()
     while (_running) {
         _window->pollEvents();
         update();
-        
+
         _window->beginFrame();
         render();
         _window->beginImGuiFrame();
         Gump::renderUI(*this);
         _window->endFrame();
-        
+
         Input::update();
         if (_window->shouldClose()) _running = false;
     }
@@ -61,7 +61,7 @@ void Gump::Application::stop()
 
 void Gump::Application::update()
 {
-    if ((Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) || 
+    if ((Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) ||
         Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE))) {
         _camera->move(Input::getMouseDelta());
     }

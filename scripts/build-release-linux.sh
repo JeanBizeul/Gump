@@ -30,7 +30,7 @@ cd "$CURRENT_DIR"
 
 if [[ "$runchoice" =~ ^[Yy]$ ]]; then
     echo "Launching Gump..."
-    ./Release/gump
+    ./build/Release/gump
 else
     echo "Skipping launch."
 fi

@@ -27,6 +27,11 @@ static int getMaxTextureSize()
     return static_cast<int>(size > 0 ? size : 0);
 }
 
+TextureAtlas::TextureAtlas()
+    : _pageSize(getMaxTextureSize())
+{
+}
+
 TextureAtlas::TextureAtlas(const std::string &path)
     : _texturesFolder(path), _pageSize(getMaxTextureSize())
 {
@@ -120,9 +125,8 @@ bool TextureAtlas::addImageFromFile(const std::string &filePath)
     std::filesystem::path path(filePath);
     std::string name = path.string();
 
-    // Open file in binary mode
-    FILE* f = nullptr;
-    fopen_s(&f, filePath.c_str(), "rb");
+    // Open file in binary mode (cross-platform)
+    FILE* f = fopen(filePath.c_str(), "rb");
     if (!f)
     {
         LOG_ERROR("Failed to open '{}'", path.string());

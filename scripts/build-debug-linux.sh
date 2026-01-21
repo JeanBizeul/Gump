@@ -29,7 +29,7 @@ runchoice=${runchoice:-Y}  # default to Y if empty
 cd "$CURRENT_DIR"
 if [[ "$runchoice" =~ ^[Yy]$ ]]; then
     echo "Launching Gump..."
-    ./Debug/gump
+    ./build/Debug/gump
 else
     echo "Skipping launch."
 fi
