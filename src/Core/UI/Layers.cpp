@@ -14,19 +14,7 @@ void Gump::UI::renderLayers(Gump::Application &app) {
     for (size_t i = 0; i < app.getLayerCount(); i++) {
         Layer* layer = &app.getLayer(i);
 
-        // Visibility checkbox
-        ImGui::Checkbox(("##visible" + std::to_string(i)).c_str(), &layer->isVisible);
-
-        // Layer name
-        ImGui::SameLine();
-        ImGui::Text("%s", layer->name.c_str());
-
-        // Transparency slider
-        ImGui::SameLine();
-        ImGui::SliderFloat(("##transparency" + std::to_string(i)).c_str(), &layer->transparency, 0.0f, 1.0f);
-
         // Move up button
-        ImGui::SameLine();
         if (!app.canLayerMoveUp(i)) {
             ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
@@ -38,7 +26,7 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::PopItemFlag();
             ImGui::PopStyleVar();
         }
-        
+
         // Move down button
         ImGui::SameLine();
         if (!app.canLayerMoveDown(i)) {
@@ -51,6 +39,25 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         if (!app.canLayerMoveDown(i)) {
             ImGui::PopItemFlag();
             ImGui::PopStyleVar();
+        }
+
+        // Layer name
+        ImGui::SameLine();
+        ImGui::Text("%s", layer->name.c_str());
+
+        // Visibility checkbox
+        ImGui::Checkbox(("##visible" + std::to_string(i)).c_str(), &layer->isVisible);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Visible");
+        }
+
+        // Transparency slider
+        ImGui::SameLine();
+        ImGui::SliderFloat(("##transparency" + std::to_string(i)).c_str(), &layer->transparency, 0.0f, 1.0f);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Transparency");
         }
     }
 

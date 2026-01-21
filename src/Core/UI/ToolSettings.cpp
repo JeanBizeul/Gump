@@ -34,7 +34,7 @@ static void renderSelectionToolSettings(Gump::Application &app)
 
     ImGui::BeginDisabled(!isThereASelection);
 
-    if (ImGui::Button("Clear Selection")) {
+    if (ImGui::Button("Clear selection")) {
         app.getSelectionState().hasSelection = false;
         app.updateSelectionMesh();
     }
@@ -43,7 +43,7 @@ static void renderSelectionToolSettings(Gump::Application &app)
 
     ImGui::BeginDisabled(!isThereASelection || !isThereALayer);
 
-    if (ImGui::Button("Send to new layer")) {
+    if (ImGui::Button("Send selection to new layer")) {
         app.sendSelectionToNewLayer();
     }
 
