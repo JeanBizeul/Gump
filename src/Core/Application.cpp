@@ -91,9 +91,10 @@ void Gump::Application::render()
         _checkerboardMesh->draw();
     }
 
-    // Render layers on top
+    // Render layers on top (clipped to canvas bounds)
     _shader->use();
     _shader->set("uProjectionView", pv);
+    _shader->set("uCanvasSize", glm::vec2(_canvasSize.x, _canvasSize.y));
 
     for (const auto& layer : _layers) {
         _textureAtlas->bindPage(layer->texturePageIndex);
