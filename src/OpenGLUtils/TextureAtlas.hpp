@@ -45,6 +45,8 @@ public:
     // Get UV for a given image name
     std::optional<UVEntry_t> getUVRect(const std::string &blockName) const;
 
+    std::optional<unsigned int> getPageTextureID(int pageIndex) const;
+
     std::optional<std::reference_wrapper<const ImageData_s>> getImageData(const std::string &blockName) const;
 
     // Total number of atlas pages

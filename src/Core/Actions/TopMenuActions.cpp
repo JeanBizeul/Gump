@@ -117,19 +117,19 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
             auto textureOpt = app.getTextureAtlas().getUVRect(filepath);
             if (imageDataOpt) {
                 const auto &imageData = imageDataOpt->get();
-                
+
                 // Check if image is larger than current canvas
                 glm::uvec2 currentCanvasSize = app.getCanvasSize();
-                bool needsResize = imageData.width > currentCanvasSize.x || 
+                bool needsResize = imageData.width > currentCanvasSize.x ||
                                    imageData.height > currentCanvasSize.y;
-                
+
                 if (needsResize) {
                     // Calculate new canvas size (max of current and new image)
                     glm::uvec2 newCanvasSize = glm::uvec2(
                         std::max(static_cast<unsigned int>(imageData.width), currentCanvasSize.x),
                         std::max(static_cast<unsigned int>(imageData.height), currentCanvasSize.y)
                     );
-                    
+
                     // Set up pending import for UI to handle
                     auto& pending = app.getPendingImport();
                     pending.isPending = true;
@@ -140,7 +140,7 @@ std::expected<void, std::string> Actions::TopMenu::importImage(Application &app)
                     pending.uvMax = textureOpt->uvMax;
                     pending.texturePageIndex = textureOpt->pageIndex;
                     pending.suggestedCanvasSize = newCanvasSize;
-                    
+
                     LOG_INFO("Image ({}x{}) is larger than canvas ({}x{}). User prompt required.",
                         imageData.width, imageData.height,
                         currentCanvasSize.x, currentCanvasSize.y);

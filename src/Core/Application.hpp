@@ -55,16 +55,19 @@ class Application
     OpenGLUtils::TextureAtlas &getTextureAtlas();
 
     glm::uvec2 getWindowSize() const;
-    
+
     // Canvas management
     glm::uvec2 getCanvasSize() const;
     void setCanvasSize(glm::uvec2 size);
-    
+
     // Pending import
     PendingImport& getPendingImport();
-    
+
     // Manual canvas resize
     ResizeCanvasRequest& getResizeCanvasRequest();
+
+    void setSelectedTool(const std::string& tool);
+    const std::string& getSelectedTool() const;
 
  private:
     bool _running = true;
@@ -73,10 +76,13 @@ class Application
     PendingImport _pendingImport;
     ResizeCanvasRequest _resizeCanvasRequest;
 
+    std::string _selectedTool = "move";
+
     std::unique_ptr<OpenGLUtils::Window> _window;
     std::unique_ptr<OpenGLUtils::TextureAtlas> _textureAtlas;
     std::vector<std::unique_ptr<Layer>> _layers;
     std::unique_ptr<OpenGLUtils::Shader> _shader;
+    std::unique_ptr<OpenGLUtils::Shader> _selectionShader;
     std::unique_ptr<OpenGLUtils::Shader> _checkerboardShader;
     std::unique_ptr<OpenGLUtils::Mesh> _checkerboardMesh;
     std::unique_ptr<Camera2D> _camera;

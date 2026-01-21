@@ -13,7 +13,7 @@
 const size_t WindowWidth = 1680;
 const size_t WindowHeight = 980;
 const std::string_view WindowName = "Gump";
-const std::string TexturesFolderPath = "assets/textures/";
+const std::string TexturesFolderPath = "assets/";
 
 Gump::Application::Application()
     : _windowSize(WindowWidth, WindowHeight), _canvasSize(800, 600)
@@ -24,7 +24,7 @@ Gump::Application::Application()
         LOG_DEBUG("Creating camera ...");
         _camera = std::make_unique<Camera2D>();
         LOG_DEBUG("Loading assets ...");
-        _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>();
+        _textureAtlas = std::make_unique<OpenGLUtils::TextureAtlas>(TexturesFolderPath);
         _shader = std::make_unique<OpenGLUtils::Shader>(
             "shaders/canva.vert",
             "shaders/canva.frag"
@@ -35,7 +35,7 @@ Gump::Application::Application()
         );
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
-        
+
         // Initialize checkerboard mesh
         updateCheckerboardMesh();
     } catch (const std::exception& e) {
@@ -183,6 +183,16 @@ Gump::PendingImport& Gump::Application::getPendingImport()
 Gump::ResizeCanvasRequest& Gump::Application::getResizeCanvasRequest()
 {
     return _resizeCanvasRequest;
+}
+
+void Gump::Application::setSelectedTool(const std::string &tool)
+{
+    _selectedTool = tool;
+}
+
+const std::string& Gump::Application::getSelectedTool() const
+{
+    return _selectedTool;
 }
 
 void Gump::Application::updateCheckerboardMesh()

@@ -266,6 +266,16 @@ std::optional<UVEntry_t> TextureAtlas::getUVRect(const std::string &blockName) c
     return it->second;
 }
 
+std::optional<unsigned int> OpenGLUtils::TextureAtlas::getPageTextureID(int pageIndex) const
+{
+    try {
+        return _pages.at(pageIndex).textureId;
+    } catch (const std::out_of_range& e) {
+        LOG_ERROR("Requested page index {} out of bounds: {}", pageIndex, e.what());
+        return std::nullopt;
+    }
+}
+
 std::optional<std::reference_wrapper<const TextureAtlas::ImageData_s>>
 TextureAtlas::getImageData(const std::string &blockName) const
 {
