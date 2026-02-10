@@ -52,6 +52,10 @@ Gump::Application::Application()
         
         // Initialize selection mask texture
         glGenTextures(1, &_selectionMaskTexture);
+        
+        // Create default empty layer
+        LOG_DEBUG("Creating default empty layer...");
+        createEmptyLayer();
     } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -84,6 +88,228 @@ void Gump::Application::run()
 void Gump::Application::stop()
 {
     _running = false;
+}
+
+void Gump::Application::commitStrokeToLayer(Layer& layer, const BrushStroke& stroke)
+{
+    if (_layers.empty()) {
+        LOG_ERROR("Cannot commit stroke: no layers available");
+        return;
+    }
+
+    // Get stroke bounding box for partial update
+    glm::vec4 bbox = stroke.getBoundingBox();
+    glm::vec2 bboxMin(bbox.x, bbox.y);
+    glm::vec2 bboxMax(bbox.z, bbox.w);
+    
+    // Clamp to layer bounds
+    bboxMin = glm::max(bboxMin, glm::vec2(0.0f));
+    bboxMax = glm::min(bboxMax, glm::vec2(layer.getWidth(), layer.getHeight()));
+    
+    int width = static_cast<int>(bboxMax.x - bboxMin.x);
+    int height = static_cast<int>(bboxMax.y - bboxMin.y);
+    
+    if (width <= 0 || height <= 0) {
+        LOG_WARNING("Stroke bounding box outside layer bounds");
+        return;
+    }
+
+    LOG_INFO("Committing stroke to layer (bbox: {}x{} at {}, {})", width, height, bboxMin.x, bboxMin.y);
+
+    // Get the texture page for the layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(layer.texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    // Get UV coordinates for the layer
+    glm::vec2 layerUVMin = layer.getUVMin();
+    glm::vec2 layerUVMax = layer.getUVMax();
+
+    // Calculate texture coordinates in pixels
+    GLuint layerTexture = *pageTexIdOpt;
+    glBindTexture(GL_TEXTURE_2D, layerTexture);
+    
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Convert layer UV to pixel coordinates
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    // Create FBO to render stroke onto layer texture
+    GLuint compositeFBO;
+    glGenFramebuffers(1, &compositeFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, compositeFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, layerTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        LOG_ERROR("Composite FBO incomplete");
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &compositeFBO);
+        return;
+    }
+
+    // Set viewport to the entire texture (important!)
+    glViewport(0, 0, texWidth, texHeight);
+
+    // Setup blending for merging stroke
+    glEnable(GL_BLEND);
+    if (_brushSettings.eraser) {
+        // Eraser mode: subtract alpha
+        glBlendFuncSeparate(GL_ZERO, GL_ZERO, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+    } else {
+        // Paint mode: normal alpha blending
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                           GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    // Render stroke texture onto layer texture
+    // We need to render the stroke texture as a textured quad
+    // First, create a simple shader to blit the stroke texture
+    
+    // For now, use a simple approach: read pixels from stroke and write to layer
+    // This is less efficient but works reliably
+    
+    // Get stroke texture
+    GLuint strokeTexture = stroke.getStrokeTexture();
+    
+    // Read pixels from stroke FBO
+    std::vector<unsigned char> strokePixels(width * height * 4);
+    
+    // Bind stroke texture and read the relevant region
+    GLuint readFBO;
+    glGenFramebuffers(1, &readFBO);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, readFBO);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, strokeTexture, 0);
+    
+    if (glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+        // Read the stroke region
+        glReadPixels(static_cast<int>(bboxMin.x), static_cast<int>(bboxMin.y), 
+                     width, height, GL_RGBA, GL_UNSIGNED_BYTE, strokePixels.data());
+    }
+    
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &readFBO);
+
+    // Now blend these pixels onto the layer texture
+    // Calculate where to write in the layer texture
+    int writeX = layerTexX + static_cast<int>(bboxMin.x);
+    int writeY = layerTexY + static_cast<int>(bboxMin.y);
+
+    // Read existing layer pixels
+    glBindFramebuffer(GL_FRAMEBUFFER, compositeFBO);
+    std::vector<unsigned char> layerPixels(width * height * 4);
+    glReadPixels(writeX, writeY, width, height, GL_RGBA, GL_UNSIGNED_BYTE, layerPixels.data());
+
+    // Manually blend stroke pixels onto layer pixels
+    for (int i = 0; i < width * height; i++) {
+        int idx = i * 4;
+        float srcA = strokePixels[idx + 3] / 255.0f;
+        float dstA = layerPixels[idx + 3] / 255.0f;
+        
+        if (_brushSettings.eraser) {
+            // Eraser: reduce alpha
+            layerPixels[idx + 3] = static_cast<unsigned char>(dstA * (1.0f - srcA) * 255.0f);
+        } else {
+            // Normal blending
+            float outA = srcA + dstA * (1.0f - srcA);
+            if (outA > 0.0f) {
+                for (int c = 0; c < 3; c++) {
+                    float srcC = strokePixels[idx + c] / 255.0f;
+                    float dstC = layerPixels[idx + c] / 255.0f;
+                    float outC = (srcC * srcA + dstC * dstA * (1.0f - srcA)) / outA;
+                    layerPixels[idx + c] = static_cast<unsigned char>(outC * 255.0f);
+                }
+                layerPixels[idx + 3] = static_cast<unsigned char>(outA * 255.0f);
+            }
+        }
+    }
+
+    // Write blended pixels back to layer texture
+    glBindTexture(GL_TEXTURE_2D, layerTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, writeX, writeY, width, height,
+                    GL_RGBA, GL_UNSIGNED_BYTE, layerPixels.data());
+
+    glDisable(GL_BLEND);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &compositeFBO);
+
+    // Restore viewport to window size
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    glViewport(0, 0, vp[2], vp[3]);
+
+    LOG_INFO("Stroke committed to layer");
+}
+
+void Gump::Application::startStroke(const glm::vec2& position, float pressure)
+{
+    if (_layers.empty()) {
+        LOG_WARNING("Cannot start stroke: no layers available");
+        return;
+    }
+
+    // Initialize default brush settings if needed
+    if (_brushSettings.baseSize == 0.0f) {
+        _brushSettings.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Black
+        _brushSettings.baseSize = 10.0f;
+        _brushSettings.hardness = 0.8f;
+        _brushSettings.opacity = 1.0f;
+        _brushSettings.spacing = 0.1f;
+        _brushSettings.eraser = false;
+    }
+
+    LOG_INFO("Starting new stroke at ({}, {})", position.x, position.y);
+
+    // Create new stroke
+    _currentStroke = std::make_unique<BrushStroke>(_brushSettings);
+    _currentStroke->addPoint(position, pressure);
+}
+
+void Gump::Application::continueStroke(const glm::vec2& position, float pressure)
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Cannot continue stroke: no active stroke");
+        return;
+    }
+
+    _currentStroke->addPoint(position, pressure);
+
+    // Check if we should commit and start a new stroke chunk
+    if (_currentStroke->shouldCommit()) {
+        LOG_INFO("Stroke reached commit threshold, committing to layer");
+        
+        if (!_layers.empty()) {
+            // Commit to the top layer
+            auto& topLayer = _layers.back();
+            commitStrokeToLayer(*topLayer, *_currentStroke);
+        }
+
+        // Clear the stroke but keep drawing
+        _currentStroke->clear();
+    }
+}
+
+void Gump::Application::endStroke()
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Cannot end stroke: no active stroke");
+        return;
+    }
+
+    LOG_INFO("Ending stroke");
+
+    // Commit final stroke to layer
+    if (!_layers.empty()) {
+        auto& topLayer = _layers.back();
+        commitStrokeToLayer(*topLayer, *_currentStroke);
+    }
+
+    // Clear the stroke
+    _currentStroke.reset();
 }
 
 void Gump::Application::update()
@@ -132,6 +358,11 @@ void Gump::Application::render()
         _shader->set("uTexture", 0);
         _shader->set("uTransparency", layer->transparency);
         layer->draw();
+    }
+
+    // Render active brush stroke preview
+    if (_currentStroke) {
+        _currentStroke->renderPreview(pv);
     }
 
     // Render selection overlay
@@ -633,5 +864,31 @@ void Gump::Application::sendSelectionToNewLayer()
         }
     } else {
         LOG_ERROR("Failed to add selection to texture atlas");
+    }
+}
+
+void Gump::Application::createEmptyLayer()
+{
+    // Create a unique name for the new layer
+    std::string newLayerName = "Layer_" + std::to_string(_layers.size() + 1);
+    
+    // Create transparent pixels for the layer (matching canvas size)
+    std::vector<unsigned char> emptyPixels(_canvasSize.x * _canvasSize.y * 4, 0);
+    
+    // Add the empty pixels to the texture atlas
+    if (_textureAtlas->addImageFromPixels(newLayerName, _canvasSize.x, _canvasSize.y, emptyPixels)) {
+        // Get UV coordinates for the new texture
+        auto uvRectOpt = _textureAtlas->getUVRect(newLayerName);
+        if (uvRectOpt) {
+            // Create a new layer
+            addLayer(newLayerName, _canvasSize.x, _canvasSize.y, 
+                    uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+
+            LOG_INFO("Created new empty layer '{}'", newLayerName);
+        } else {
+            LOG_ERROR("Failed to get UV coordinates for new empty layer");
+        }
+    } else {
+        LOG_ERROR("Failed to add empty layer to texture atlas");
     }
 }

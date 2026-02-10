@@ -12,6 +12,7 @@
 #include "TextureAtlas.hpp"
 #include "Camera2D.hpp"
 #include "Input.hpp"
+#include "Tools/Stroke.hpp"
 
 namespace Gump
 {
@@ -134,6 +135,14 @@ class Application
     // Extract pixels from selection and create a new layer
     void sendSelectionToNewLayer();
 
+    BrushSettings& getBrushSettings() { return _brushSettings; }
+    void startStroke(const glm::vec2& position, float pressure = 1.0f);
+    void continueStroke(const glm::vec2& position, float pressure = 1.0f);
+    void endStroke();
+    
+    // Create a new empty layer
+    void createEmptyLayer();
+
  private:
     bool _running = true;
     glm::uvec2 _windowSize;
@@ -158,7 +167,12 @@ class Application
     std::unique_ptr<OpenGLUtils::Mesh> _checkerboardMesh;
     std::unique_ptr<Camera2D> _camera;
     std::unique_ptr<OpenGLUtils::Mesh> _selectionMesh;
-    
+
+    std::unique_ptr<BrushStroke> _currentStroke;
+    BrushSettings _brushSettings;
+    std::unordered_map<std::string, unsigned int> _brushTextures;
+    void commitStrokeToLayer(Layer& layer, const BrushStroke& stroke);
+
     // Selection mask texture for fuzzy select
     GLuint _selectionMaskTexture = 0;
 
