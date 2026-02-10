@@ -95,6 +95,7 @@ class Application
     void moveLayerDown(size_t index);
     void addLayer(const std::string &name, size_t width, size_t height,
       glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
+    void addEmptyLayer(const std::string &name, size_t width, size_t height);
     size_t getLayerCount() const;
     Layer &getLayer(size_t index) const;
     std::vector<std::unique_ptr<Layer>> &getLayers();
@@ -133,6 +134,10 @@ class Application
 
     // Extract pixels from selection and create a new layer
     void sendSelectionToNewLayer();
+    
+    // Layer name validation
+    bool isLayerNameTaken(const std::string& name, size_t excludeIndex = -1) const;
+    std::string generateUniqueLayerName(const std::string& baseName) const;
 
  private:
     bool _running = true;

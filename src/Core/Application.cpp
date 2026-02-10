@@ -52,6 +52,10 @@ Gump::Application::Application()
         
         // Initialize selection mask texture
         glGenTextures(1, &_selectionMaskTexture);
+        
+        // Create a default empty layer
+        LOG_DEBUG("Creating default empty layer ...");
+        addEmptyLayer("Layer 1", 800, 600);
     } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -208,6 +212,64 @@ void Gump::Application::addLayer(const std::string &name, size_t width, size_t h
     glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
 {
     _layers.push_back(std::make_unique<Layer>(name, width, height, uvMin, uvMax, textureID));
+}
+
+void Gump::Application::addEmptyLayer(const std::string &name, size_t width, size_t height)
+{
+    // Generate a unique name if the requested name is already taken
+    std::string uniqueName = generateUniqueLayerName(name);
+    
+    LOG_INFO("Creating empty layer '{}' with size {}x{}", uniqueName, width, height);
+    
+    // Create transparent pixels (RGBA with all zeros)
+    std::vector<unsigned char> emptyPixels(width * height * 4, 0);
+    
+    // Add the empty image to the texture atlas
+    if (_textureAtlas->addImageFromPixels(uniqueName, width, height, emptyPixels)) {
+        // Get UV coordinates for the new texture
+        auto uvRectOpt = _textureAtlas->getUVRect(uniqueName);
+        if (uvRectOpt) {
+            // Create the layer
+            addLayer(uniqueName, width, height, uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+            LOG_INFO("Successfully created empty layer '{}'", uniqueName);
+        } else {
+            LOG_ERROR("Failed to get UV coordinates for empty layer '{}'", uniqueName);
+        }
+    } else {
+        LOG_ERROR("Failed to add empty layer '{}' to texture atlas", uniqueName);
+    }
+}
+
+bool Gump::Application::isLayerNameTaken(const std::string& name, size_t excludeIndex) const
+{
+    for (size_t i = 0; i < _layers.size(); i++) {
+        if (i == excludeIndex) {
+            continue; // Skip the excluded layer (used when renaming)
+        }
+        if (_layers[i]->name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string Gump::Application::generateUniqueLayerName(const std::string& baseName) const
+{
+    // If the base name is not taken, use it as-is
+    if (!isLayerNameTaken(baseName)) {
+        return baseName;
+    }
+    
+    // Otherwise, append a number to make it unique
+    int counter = 1;
+    std::string uniqueName;
+    
+    do {
+        uniqueName = baseName + " (" + std::to_string(counter) + ")";
+        counter++;
+    } while (isLayerNameTaken(uniqueName));
+    
+    return uniqueName;
 }
 
 std::vector<std::unique_ptr<Gump::Layer>> &Gump::Application::getLayers()

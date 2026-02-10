@@ -13,6 +13,25 @@ void Gump::UI::renderLayers(Gump::Application &app) {
     // ImGui::SetNextWindowClass(&windowClass);
     ImGui::Begin("Layers");
 
+    // Button to add new empty layer
+    if (ImGui::Button("Add Empty Layer")) {
+        // Generate unique name for new layer
+        std::string newLayerName = "Layer " + std::to_string(app.getLayerCount() + 1);
+        auto canvasSize = app.getCanvasSize();
+        app.addEmptyLayer(newLayerName, canvasSize.x, canvasSize.y);
+    }
+    
+    ImGui::Separator();
+
+    // Track previous layer names to validate changes
+    static std::vector<std::string> previousNames;
+    if (previousNames.size() != app.getLayerCount()) {
+        previousNames.clear();
+        for (size_t i = 0; i < app.getLayerCount(); i++) {
+            previousNames.push_back(app.getLayer(i).name);
+        }
+    }
+
     for (size_t i = 0; i < app.getLayerCount(); i++) {
         Layer* layer = &app.getLayer(i);
 
@@ -46,8 +65,29 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::SameLine();
         }
 
-        // Layer name
-        ImGui::InputText("##Name", &layer->name);
+        // Layer name input with validation
+        std::string oldName = layer->name;
+        ImGui::InputText(("##Name" + std::to_string(i)).c_str(), &layer->name);
+        
+        // Validate name change
+        if (layer->name != oldName) {
+            // Check if the new name is already taken by another layer
+            if (app.isLayerNameTaken(layer->name, i)) {
+                // Name is taken, revert to old name or generate unique name
+                layer->name = app.generateUniqueLayerName(layer->name);
+                LOG_WARNING("Layer name already taken, renamed to '{}'", layer->name);
+            }
+            previousNames[i] = layer->name;
+        }
+        
+        // Show warning if name was changed due to conflict
+        if (ImGui::IsItemDeactivatedAfterEdit() && layer->name != oldName && app.isLayerNameTaken(oldName, i)) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.0f, 1.0f), "!");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Name was already taken, automatically renamed");
+            }
+        }
 
         // Move up button
         if (!app.canLayerMoveUp(i)) {
@@ -77,14 +117,40 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         }
 
         ImGui::SameLine();
+        
+        // Disable delete button if this is the only layer
+        bool canDelete = app.getLayerCount() > 1;
+        if (!canDelete) {
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        }
+        
         ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255,100,100,255));
         if (ImGui::Button(("Delete##" + std::to_string(i)).c_str())) {
             ImGui::PopStyleColor();
+            if (!canDelete) {
+                ImGui::PopItemFlag();
+                ImGui::PopStyleVar();
+            }
             app.getLayers().erase(app.getLayers().begin() + i);
             ImGui::End();
             return; // Avoid going to bad layers ids
         }
         ImGui::PopStyleColor();
+        
+        if (!canDelete) {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+        }
+        
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            if (!canDelete) {
+                ImGui::SetTooltip("Cannot delete the only layer");
+            } else {
+                ImGui::SetTooltip("Delete this layer");
+            }
+        }
 
         ImGui::SameLine();
         if (ImGui::Button(("Reset##" + std::to_string(i)).c_str())) {
