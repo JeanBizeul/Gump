@@ -146,14 +146,13 @@ void Gump::Application::update()
 
 void Gump::Application::render()
 {
-    // Get and set viewport at the start of each frame
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    float width  = static_cast<float>(vp[2]);
-    float height = static_cast<float>(vp[3]);
+    // Get viewport size from ImGui's main viewport
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float width = viewport->Size.x;
+    float height = viewport->Size.y;
     
     // Set viewport for the main rendering pass
-    glViewport(0, 0, vp[2], vp[3]);
+    glViewport(0, 0, static_cast<int>(width), static_cast<int>(height));
 
     glm::mat4 pv = _camera->getPVMatrix(width, height);
 
@@ -919,10 +918,17 @@ void Gump::Application::applySelectedEffect()
     glm::vec2 layerUVMin = topLayer->getUVMin();
     int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
     int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+    
+    // Get layer dimensions for Y-flip calculation
+    int layerHeight = static_cast<int>(topLayer->getHeight());
 
     // Calculate selection position in texture
+    // X coordinate is straightforward
     int texX = layerTexX + static_cast<int>(selMin.x);
-    int texY = layerTexY + static_cast<int>(selMin.y);
+    
+    // Y coordinate needs to be flipped because OpenGL textures have origin at bottom-left
+    // while our layer space has origin at top-left
+    int texY = layerTexY + (layerHeight - static_cast<int>(selMax.y));
 
     // Apply the effect to the texture region
     effect->apply(*pageTexIdOpt, texWidth, texHeight, texX, texY, selWidth, selHeight);

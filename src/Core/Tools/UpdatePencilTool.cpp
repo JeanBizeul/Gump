@@ -8,10 +8,10 @@ void Gump::Tools::UpdatePencilTool(Application &app)
 {
     auto& cam = app.getCamera();
 
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    float width  = static_cast<float>(vp[2]);
-    float height = static_cast<float>(vp[3]);
+    // Get viewport size from ImGui's main viewport
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float width = viewport->Size.x;
+    float height = viewport->Size.y;
     glm::vec2 windowSize(width, height);
 
     // Check if mouse is over ImGui window

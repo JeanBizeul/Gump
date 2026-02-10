@@ -1,6 +1,7 @@
 #include "Effect.hpp"
 #include "Logger.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
 
 using namespace Gump;
 
@@ -57,9 +58,10 @@ void Effect::renderEffect(GLuint targetTexture, GLuint sourceTexture,
                          int texWidth, int texHeight,
                          int regionX, int regionY, int regionWidth, int regionHeight)
 {
-    // Save current viewport
-    GLint savedViewport[4];
-    glGetIntegerv(GL_VIEWPORT, savedViewport);
+    // Save current viewport from ImGui's main viewport
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 savedViewportSize = viewport->Size;
+    ImVec2 savedViewportPos = viewport->Pos;
 
     // Create framebuffer for rendering
     GLuint fbo;
@@ -111,7 +113,8 @@ void Effect::renderEffect(GLuint targetTexture, GLuint sourceTexture,
     glDeleteFramebuffers(1, &fbo);
 
     // Restore viewport
-    glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+    glViewport(static_cast<int>(savedViewportPos.x), static_cast<int>(savedViewportPos.y),
+               static_cast<int>(savedViewportSize.x), static_cast<int>(savedViewportSize.y));
 }
 
 void Effect::preview(GLuint sourceTexture, int texWidth, int texHeight,
