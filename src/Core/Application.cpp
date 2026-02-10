@@ -333,6 +333,90 @@ Gump::FuzzySelectSettings& Gump::Application::getFuzzySelectSettings()
     return _fuzzySelectSettings;
 }
 
+// Brush and stroke management
+Gump::BrushSettings& Gump::Application::getBrushSettings()
+{
+    return _brushSettings;
+}
+
+std::unique_ptr<Gump::Stroke>& Gump::Application::getCurrentStroke()
+{
+    return _currentStroke;
+}
+
+bool Gump::Application::hasActiveStroke() const
+{
+    return _currentStroke != nullptr;
+}
+
+void Gump::Application::startStroke(const glm::vec2& position, float pressure)
+{
+    if (_currentStroke) {
+        LOG_WARNING("Starting new stroke while one is already active - cancelling previous stroke");
+        _currentStroke.reset();
+    }
+    
+    _currentStroke = std::make_unique<Stroke>(_brushSettings);
+    _currentStroke->addPoint(position, pressure);
+    
+    LOG_DEBUG("Stroke started at ({}, {}) with {} points", position.x, position.y, _currentStroke->getPointCount());
+}
+
+void Gump::Application::continueStroke(const glm::vec2& position, float pressure)
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Attempting to continue stroke that hasn't been started");
+        return;
+    }
+    
+    _currentStroke->addPoint(position, pressure);
+}
+
+void Gump::Application::finishStroke()
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Attempting to finish stroke that hasn't been started");
+        return;
+    }
+    
+    if (_currentStroke->isEmpty()) {
+        LOG_WARNING("Finishing empty stroke");
+        _currentStroke.reset();
+        return;
+    }
+    
+    LOG_INFO("Finishing stroke with {} points", _currentStroke->getPointCount());
+    
+    // Apply stroke to the top layer
+    if (!_layers.empty()) {
+        applyStrokeToLayer(*_currentStroke, *_layers.back());
+    } else {
+        LOG_WARNING("No layers available to apply stroke to");
+    }
+    
+    // Clear the current stroke
+    _currentStroke.reset();
+}
+
+void Gump::Application::cancelStroke()
+{
+    if (_currentStroke) {
+        LOG_INFO("Stroke cancelled");
+        _currentStroke.reset();
+    }
+}
+
+void Gump::Application::applyStrokeToLayer(const Stroke& stroke, Layer& layer)
+{
+    // This is a placeholder - you'll implement the actual GPU rendering later
+    LOG_INFO("Applying stroke to layer '{}' (placeholder - implement GPU rendering)", layer.name);
+    
+    // TODO: Implement stroke rendering
+    // 1. Send stroke data to GPU
+    // 2. Render stroke to a framebuffer with the layer texture
+    // 3. Update the layer texture with the result
+}
+
 void Gump::Application::copySelection()
 {
     if (!_selectionState.hasSelection || _layers.empty()) {

@@ -1,0 +1,54 @@
+#include "ToolsFunctions.hpp"
+#include "../Application.hpp"
+#include "../Input.hpp"
+#include <GLFW/glfw3.h>
+#include "Logger.hpp"
+
+void Gump::Tools::UpdatePencilTool(Application &app)
+{
+    auto& cam = app.getCamera();
+
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    float width  = static_cast<float>(vp[2]);
+    float height = static_cast<float>(vp[3]);
+    glm::vec2 windowSize(width, height);
+
+    // Check if mouse is over ImGui window
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        return;
+    }
+
+    // Start stroke on mouse press
+    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        glm::vec2 worldPos = cam.screenToWorld(Input::getMousePosition(), windowSize);
+        
+        // Ensure eraser is disabled for pencil
+        auto& brushSettings = app.getBrushSettings();
+        brushSettings.isEraser = false;
+        
+        app.startStroke(worldPos);
+        LOG_DEBUG("Pencil stroke started at ({}, {})", worldPos.x, worldPos.y);
+    }
+
+    // Continue stroke while dragging
+    if (Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_LEFT) && app.hasActiveStroke()) {
+        glm::vec2 worldPos = cam.screenToWorld(Input::getMousePosition(), windowSize);
+        app.continueStroke(worldPos);
+    }
+
+    // Finish stroke on mouse release
+    if (Input::isMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT) && app.hasActiveStroke()) {
+        glm::vec2 worldPos = cam.screenToWorld(Input::getMousePosition(), windowSize);
+        app.continueStroke(worldPos);
+        app.finishStroke();
+        LOG_DEBUG("Pencil stroke finished");
+    }
+
+    // Cancel stroke on Escape
+    if (Input::isKeyPressed(GLFW_KEY_ESCAPE) && app.hasActiveStroke()) {
+        app.cancelStroke();
+        LOG_DEBUG("Pencil stroke cancelled");
+    }
+}

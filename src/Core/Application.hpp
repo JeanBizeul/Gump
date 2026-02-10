@@ -12,6 +12,7 @@
 #include "TextureAtlas.hpp"
 #include "Camera2D.hpp"
 #include "Input.hpp"
+#include "Stroke.hpp"
 
 namespace Gump
 {
@@ -139,6 +140,16 @@ class Application
     bool isLayerNameTaken(const std::string& name, size_t excludeIndex = -1) const;
     std::string generateUniqueLayerName(const std::string& baseName) const;
 
+    // Brush and stroke management
+    BrushSettings& getBrushSettings();
+    std::unique_ptr<Stroke>& getCurrentStroke();
+    bool hasActiveStroke() const;
+    void startStroke(const glm::vec2& position, float pressure = 1.0f);
+    void continueStroke(const glm::vec2& position, float pressure = 1.0f);
+    void finishStroke();
+    void cancelStroke();
+    void applyStrokeToLayer(const Stroke& stroke, Layer& layer);
+
  private:
     bool _running = true;
     glm::uvec2 _windowSize;
@@ -150,6 +161,10 @@ class Application
     std::string _selectedTool = "move";
     SelectionState _selectionState;
     FuzzySelectSettings _fuzzySelectSettings;
+    
+    // Brush and stroke state
+    BrushSettings _brushSettings;
+    std::unique_ptr<Stroke> _currentStroke;
 
     float _time = 0.0f;
 
