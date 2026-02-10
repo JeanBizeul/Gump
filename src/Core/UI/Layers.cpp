@@ -8,10 +8,15 @@
 #include "Application.hpp"
 
 void Gump::UI::renderLayers(Gump::Application &app) {
-    // ImGuiWindowClass windowClass;
-    // windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
-    // ImGui::SetNextWindowClass(&windowClass);
     ImGui::Begin("Layers");
+
+    // Add a button to create new empty layers
+    if (ImGui::Button("New Layer", ImVec2(-1, 0))) {
+        app.createEmptyLayer();
+    }
+    
+    ImGui::Separator();
+    ImGui::Spacing();
 
     for (size_t i = 0; i < app.getLayerCount(); i++) {
         Layer* layer = &app.getLayer(i);
@@ -76,15 +81,32 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::PopStyleVar();
         }
 
+        // Delete button - disabled if this is the last layer
         ImGui::SameLine();
+        bool isLastLayer = app.getLayerCount() == 1;
+        if (isLastLayer) {
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        }
         ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255,100,100,255));
         if (ImGui::Button(("Delete##" + std::to_string(i)).c_str())) {
             ImGui::PopStyleColor();
+            if (isLastLayer) {
+                ImGui::PopItemFlag();
+                ImGui::PopStyleVar();
+            }
             app.getLayers().erase(app.getLayers().begin() + i);
             ImGui::End();
             return; // Avoid going to bad layers ids
         }
         ImGui::PopStyleColor();
+        if (isLastLayer) {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && isLastLayer) {
+            ImGui::SetTooltip("Cannot delete the last layer");
+        }
 
         ImGui::SameLine();
         if (ImGui::Button(("Reset##" + std::to_string(i)).c_str())) {
