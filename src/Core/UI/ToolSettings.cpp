@@ -123,6 +123,7 @@ static void renderEffectsSettings(Gump::Application &app)
 
     auto& effects = app.getEffects();
     int selectedIndex = app.getSelectedEffectIndex();
+    static int hoveredIndex = -1;
 
     // Effect selection list
     if (ImGui::BeginListBox("##EffectsList", ImVec2(-1, 150))) {
@@ -130,12 +131,37 @@ static void renderEffectsSettings(Gump::Application &app)
             bool isSelected = (selectedIndex == static_cast<int>(i));
             if (ImGui::Selectable(effects[i]->getName().c_str(), isSelected)) {
                 app.setSelectedEffectIndex(static_cast<int>(i));
+                // Enable preview for the selected effect
+                app.setEffectPreviewIndex(static_cast<int>(i));
+            }
+
+            // Handle hover preview
+            if (ImGui::IsItemHovered()) {
+                if (hoveredIndex != static_cast<int>(i)) {
+                    hoveredIndex = static_cast<int>(i);
+                    // Show preview on hover
+                    app.setEffectPreviewIndex(static_cast<int>(i));
+                }
             }
 
             if (isSelected) {
                 ImGui::SetItemDefaultFocus();
             }
         }
+        
+        // Clear hover state when not hovering any item
+        if (!ImGui::IsWindowHovered()) {
+            if (hoveredIndex != -1 && hoveredIndex != selectedIndex) {
+                // Restore preview to selected effect (or clear if nothing selected)
+                if (selectedIndex >= 0) {
+                    app.setEffectPreviewIndex(selectedIndex);
+                } else {
+                    app.clearEffectPreview();
+                }
+                hoveredIndex = -1;
+            }
+        }
+        
         ImGui::EndListBox();
     }
 
@@ -152,23 +178,35 @@ static void renderEffectsSettings(Gump::Application &app)
         for (auto& param : params) {
             switch (param.type) {
                 case Gump::EffectParameter::Type::Float:
-                    ImGui::SliderFloat(param.name.c_str(), &param.floatValue,
-                                      param.minValue, param.maxValue, "%.2f");
+                    if (ImGui::SliderFloat(param.name.c_str(), &param.floatValue,
+                                      param.minValue, param.maxValue, "%.2f")) {
+                        // Update preview when parameter changes
+                        app.renderEffectPreview();
+                    }
                     break;
 
                 case Gump::EffectParameter::Type::Int:
-                    ImGui::SliderInt(param.name.c_str(), &param.intValue,
+                    if (ImGui::SliderInt(param.name.c_str(), &param.intValue,
                                     static_cast<int>(param.minValue),
-                                    static_cast<int>(param.maxValue));
+                                    static_cast<int>(param.maxValue))) {
+                        // Update preview when parameter changes
+                        app.renderEffectPreview();
+                    }
                     break;
 
                 case Gump::EffectParameter::Type::Bool:
-                    ImGui::Checkbox(param.name.c_str(), &param.boolValue);
+                    if (ImGui::Checkbox(param.name.c_str(), &param.boolValue)) {
+                        // Update preview when parameter changes
+                        app.renderEffectPreview();
+                    }
                     break;
 
                 case Gump::EffectParameter::Type::Color:
-                    ImGui::ColorEdit4(param.name.c_str(), param.colorValue,
-                                     ImGuiColorEditFlags_AlphaPreviewHalf);
+                    if (ImGui::ColorEdit4(param.name.c_str(), param.colorValue,
+                                     ImGuiColorEditFlags_AlphaPreviewHalf)) {
+                        // Update preview when parameter changes
+                        app.renderEffectPreview();
+                    }
                     break;
             }
         }
@@ -178,10 +216,23 @@ static void renderEffectsSettings(Gump::Application &app)
         // Apply button
         if (ImGui::Button("Apply Effect", ImVec2(-1, 0))) {
             app.applySelectedEffect();
+            // Clear preview after applying
+            app.clearEffectPreview();
+            app.setSelectedEffectIndex(-1);
         }
 
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Apply '%s' to the current selection", selectedEffect->getName().c_str());
+        }
+        
+        // Cancel button
+        if (ImGui::Button("Cancel Preview", ImVec2(-1, 0))) {
+            app.clearEffectPreview();
+            app.setSelectedEffectIndex(-1);
+        }
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Cancel and restore original image");
         }
     } else {
         ImGui::TextDisabled("Select an effect from the list");
