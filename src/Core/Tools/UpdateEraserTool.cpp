@@ -23,11 +23,11 @@ void Gump::Tools::UpdateEraserTool(Application &app)
     // Start stroke on mouse press
     if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
         glm::vec2 worldPos = cam.screenToWorld(Input::getMousePosition(), windowSize);
-        
+
         // Ensure eraser is enabled
         auto& brushSettings = app.getBrushSettings();
         brushSettings.isEraser = true;
-        
+
         app.startStroke(worldPos);
         LOG_DEBUG("Eraser stroke started at ({}, {})", worldPos.x, worldPos.y);
     }
@@ -36,6 +36,12 @@ void Gump::Tools::UpdateEraserTool(Application &app)
     if (Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_LEFT) && app.hasActiveStroke()) {
         glm::vec2 worldPos = cam.screenToWorld(Input::getMousePosition(), windowSize);
         app.continueStroke(worldPos);
+    }
+
+    // Cancel stroke on right mouse button press
+    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT) && app.hasActiveStroke()) {
+        app.cancelStroke();
+        LOG_DEBUG("Eraser stroke cancelled by right click");
     }
 
     // Finish stroke on mouse release
