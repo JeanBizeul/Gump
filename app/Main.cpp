@@ -1,0 +1,19 @@
+#include <iostream>
+
+#include "Logger.hpp"
+#include "Core/Application.hpp"
+
+int main() {
+    Logs::Logger::getInstance().setMinimumLogLevel(Logs::LogLevel::Debug);
+
+    try {
+        Gump::Application app;
+
+        app.run();
+    } catch (const std::exception& e) {
+        LOG_FATAL("An error as occured while running the app: {}", e.what());
+        return 84;
+    }
+    LOG_DEBUG("Closing app");
+    return 0;
+}
