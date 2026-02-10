@@ -74,6 +74,8 @@ void Gump::UI::renderBrushSettings(Gump::Application &app) {
         ImGui::TextDisabled("Select pencil or eraser tool");
     }
 
+    ImGui::Text("Right click or press Escape to cancel the current stroke");
+
     // Show active stroke info if drawing
     if (app.hasActiveStroke()) {
         ImGui::Spacing();
