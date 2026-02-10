@@ -13,8 +13,8 @@ Camera2D::Camera2D()
 }
 
 // Movement
-void Camera2D::move(const glm::vec2& delta) { 
-    _position += glm::vec2(delta.x, -delta.y) / _zoom; 
+void Camera2D::move(const glm::vec2& delta) {
+    _position += glm::vec2(delta.x, delta.y) / _zoom;
 }
 void Camera2D::setPosition(const glm::vec2& pos) { _position = pos; }
 
@@ -45,8 +45,9 @@ glm::mat4 Camera2D::getViewMatrix(float width, float height) const {
 
 
 glm::mat4 Camera2D::getProjectionMatrix(float width, float height) const {
-    // Center the camera on the window
-    return glm::ortho(0.0f, width, height, 0.0f, -1.0f, 1.0f);
+    // Flip Y-axis: use (0, height) to (width, 0) instead of (0, 0) to (width, height)
+    // This makes Y increase upward, matching OpenGL texture coordinates
+    return glm::ortho(0.0f, width, 0.0f, height, -1.0f, 1.0f);
 }
 
 glm::mat4 Camera2D::getPVMatrix(float width, float height) const {

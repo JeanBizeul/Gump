@@ -60,7 +60,7 @@ void Effect::renderEffect(GLuint targetTexture, GLuint sourceTexture,
     // Save current viewport
     GLint savedViewport[4];
     glGetIntegerv(GL_VIEWPORT, savedViewport);
-    
+
     // Create framebuffer for rendering
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
@@ -109,7 +109,7 @@ void Effect::renderEffect(GLuint targetTexture, GLuint sourceTexture,
     // Cleanup
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
-    
+
     // Restore viewport
     glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
 }
