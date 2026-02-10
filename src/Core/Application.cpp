@@ -968,9 +968,10 @@ void Gump::Application::renderEffectPreview()
     auto& effect = _effects[_effectPreviewIndex];
     auto& topLayer = _layers.back();
 
-    // Calculate selection bounds in layer space
-    glm::vec2 selMin = _selectionState.getMin();
-    glm::vec2 selMax = _selectionState.getMax();
+    // Calculate selection bounds in layer space INCLUDING the offset
+    // This is crucial - we need to use the actual moved position
+    glm::vec2 selMin = _selectionState.getMin() + _selectionState.offset;
+    glm::vec2 selMax = _selectionState.getMax() + _selectionState.offset;
 
     // Clamp selection to layer bounds
     selMin = glm::max(selMin, glm::vec2(0.0f));

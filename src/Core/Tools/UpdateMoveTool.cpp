@@ -47,6 +47,11 @@ void Gump::Tools::UpdateMoveTool(Application &app)
             glm::vec2 currentWorld = cam.screenToWorld(Input::getMousePosition(), windowSize);
             glm::vec2 delta = currentWorld - dragStartWorld;
             selection.offset = dragStartOffset + delta;
+
+            // Update effect preview if one is active
+            if (app.isEffectPreviewActive() && app.getEffectPreviewIndex() >= 0) {
+                app.renderEffectPreview();
+            }
         }
 
         // Stop dragging on release
@@ -55,6 +60,12 @@ void Gump::Tools::UpdateMoveTool(Application &app)
                 glm::vec2 currentWorld = cam.screenToWorld(Input::getMousePosition(), windowSize);
                 glm::vec2 delta = currentWorld - dragStartWorld;
                 selection.offset = dragStartOffset + delta;
+
+                // Update effect preview if one is active
+                if (app.isEffectPreviewActive() && app.getEffectPreviewIndex() >= 0) {
+                    app.renderEffectPreview();
+                }
+
                 isDragging = false;
             }
         }
