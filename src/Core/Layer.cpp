@@ -22,10 +22,10 @@ Layer::Layer(const std::string &name, size_t width, size_t height,
 {
     const std::vector<OpenGLUtils::Vertex_t> vertices = {
            // Position                            // UVs
-        { { 0.0f,         0.0f,          0.0f }, { uvMin.x, uvMin.y } }, // top-left
-        { { (float)width, 0.0f,          0.0f }, { uvMax.x, uvMin.y } }, // top-right
-        { { (float)width, (float)height, 0.0f }, { uvMax.x, uvMax.y } }, // bottom-right
-        { { 0.0f,         (float)height, 0.0f }, { uvMin.x, uvMax.y } }  // bottom-left
+        { { 0.0f,         0.0f,          0.0f }, { uvMin.x, uvMax.y } }, // top-left
+        { { (float)width, 0.0f,          0.0f }, { uvMax.x, uvMax.y } }, // top-right
+        { { (float)width, (float)height, 0.0f }, { uvMax.x, uvMin.y } }, // bottom-right
+        { { 0.0f,         (float)height, 0.0f }, { uvMin.x, uvMin.y } }  // bottom-left
     };
 
     _mesh = std::make_unique<OpenGLUtils::Mesh>(vertices, Indices);
@@ -41,10 +41,10 @@ void Layer::draw() const {
 void Layer::updateMesh() {
     const std::vector<OpenGLUtils::Vertex_t> vertices = {
            // Position                                    // UVs
-        { { position.x,         position.y,          0.0f }, { _uvMin.x, _uvMin.y } }, // top-left
-        { { position.x + (float)_width, position.y,          0.0f }, { _uvMax.x, _uvMin.y } }, // top-right
-        { { position.x + (float)_width, position.y + (float)_height, 0.0f }, { _uvMax.x, _uvMax.y } }, // bottom-right
-        { { position.x,         position.y + (float)_height, 0.0f }, { _uvMin.x, _uvMax.y } }  // bottom-left
+        { { position.x,         position.y,          0.0f }, { _uvMin.x, _uvMax.y } }, // top-left
+        { { position.x + (float)_width, position.y,          0.0f }, { _uvMax.x, _uvMax.y } }, // top-right
+        { { position.x + (float)_width, position.y + (float)_height, 0.0f }, { _uvMax.x, _uvMin.y } }, // bottom-right
+        { { position.x,         position.y + (float)_height, 0.0f }, { _uvMin.x, _uvMin.y } }  // bottom-left
     };
 
     _mesh = std::make_unique<OpenGLUtils::Mesh>(vertices, Indices);
