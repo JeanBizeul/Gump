@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
 
 #include <stb_image.h>
 
@@ -232,9 +233,10 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
 
     const auto& settings = stroke.getBrushSettings();
 
-    // Save the current viewport BEFORE changing anything
-    GLint savedViewport[4];
-    glGetIntegerv(GL_VIEWPORT, savedViewport);
+    // Save current viewport from ImGui's main viewport
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 savedViewportSize = viewport->Size;
+    ImVec2 savedViewportPos = viewport->Pos;
 
     // Create framebuffer
     GLuint fbo;
@@ -249,10 +251,12 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
         LOG_ERROR("Framebuffer not complete for stroke rendering");
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &fbo);
+        glViewport(static_cast<int>(savedViewportPos.x), static_cast<int>(savedViewportPos.y),
+                   static_cast<int>(savedViewportSize.x), static_cast<int>(savedViewportSize.y));
         return;
     }
 
-    // Set viewport to the layer's region within the texture atlas
+    // Set viewport to the layer's region
     glViewport(layerX, layerY, layerWidth, layerHeight);
 
     // Enable blending - use appropriate blend mode based on whether it's an eraser
@@ -297,8 +301,9 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
-    // Restore the original viewport
-    glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+    // Restore viewport
+    glViewport(static_cast<int>(savedViewportPos.x), static_cast<int>(savedViewportPos.y),
+               static_cast<int>(savedViewportSize.x), static_cast<int>(savedViewportSize.y));
 
     LOG_DEBUG("Rendered stroke to texture at ({}, {}) with size {}x{}", layerX, layerY, layerWidth, layerHeight);
 }

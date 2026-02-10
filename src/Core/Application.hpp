@@ -14,6 +14,7 @@
 #include "Input.hpp"
 #include "Stroke.hpp"
 #include "StrokeRenderer.hpp"
+#include "Effect.hpp"
 
 namespace Gump
 {
@@ -130,6 +131,21 @@ public:
     void pasteClipboard();
     // Extract pixels from selection and create a new layer
     void sendSelectionToNewLayer();
+    
+    // Effects system
+    std::vector<std::unique_ptr<Effect>>& getEffects();
+    int getSelectedEffectIndex() const { return _selectedEffectIndex; }
+    void setSelectedEffectIndex(int index) { _selectedEffectIndex = index; }
+    void applySelectedEffect();
+    
+    // Effect preview
+    int getEffectPreviewIndex() const { return _effectPreviewIndex; }
+    void setEffectPreviewIndex(int index);
+    void clearEffectPreview();
+    void renderEffectPreview();
+    GLuint getEffectPreviewTexture() const { return _effectPreviewTexture; }
+    bool isEffectPreviewActive() const { return _effectPreviewActive; }
+    
     // Layer name validation
     bool isLayerNameTaken(const std::string &name, size_t excludeIndex = -1) const;
     std::string generateUniqueLayerName(const std::string &baseName) const;
@@ -179,6 +195,17 @@ private:
 
     // Selection mask texture for fuzzy select
     GLuint _selectionMaskTexture = 0;
+
+    // Effects system
+    std::vector<std::unique_ptr<Effect>> _effects;
+    int _selectedEffectIndex = -1;
+
+    // Effect preview
+    int _effectPreviewIndex = -1;
+    GLuint _effectPreviewTexture = 0;
+    int _effectPreviewWidth = 0;
+    int _effectPreviewHeight = 0;
+    bool _effectPreviewActive = false;
 
     void update();
     void render();

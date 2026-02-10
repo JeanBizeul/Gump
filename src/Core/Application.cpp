@@ -12,6 +12,10 @@
 #include "UI/UI.hpp"
 
 #include "Tools/ToolsFunctions.hpp"
+#include "Effects/InvertEffect.hpp"
+#include "Effects/BlurEffect.hpp"
+#include "Effects/ColorFilterEffect.hpp"
+#include "Effects/NoiseEffect.hpp"
 
 const size_t WindowWidth = 1920;
 const size_t WindowHeight = 1080;
@@ -50,19 +54,25 @@ Gump::Application::Application()
         // Initialize OpenGL settings
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        
+
         // Enable point sprites for brush rendering
         glEnable(GL_PROGRAM_POINT_SIZE); // Allow shaders to control point size
-        
+
         // Initialize checkerboard mesh
         updateCheckerboardMesh();
-        
+
         // Initialize selection mask texture
         glGenTextures(1, &_selectionMaskTexture);
-        
+
         // Initialize stroke renderer
         _strokeRenderer = std::make_unique<StrokeRenderer>();
-        
+
+        // Initialize effects system
+        _effects.push_back(std::make_unique<InvertEffect>());
+        _effects.push_back(std::make_unique<BlurEffect>());
+        _effects.push_back(std::make_unique<ColorFilterEffect>());
+        _effects.push_back(std::make_unique<NoiseEffect>());
+
         // Create a default empty layer
         LOG_DEBUG("Creating default empty layer ...");
         addEmptyLayer("Layer 1", 800, 600);
@@ -78,13 +88,13 @@ void Gump::Application::run()
 
     while (_running) {
         auto frameStart = std::chrono::high_resolution_clock::now();
-        
+
         // Update time
         auto currentTime = std::chrono::high_resolution_clock::now();
         _time = std::chrono::duration<float>(currentTime - startTime).count();
 
         _window->pollEvents();
-        
+
         // Measure update time
         auto updateStart = std::chrono::high_resolution_clock::now();
         update();
@@ -92,21 +102,21 @@ void Gump::Application::run()
         _performanceTimings.updateTime = std::chrono::duration<float>(updateEnd - updateStart).count();
 
         _window->beginFrame();
-        
+
         // Measure render time
         auto renderStart = std::chrono::high_resolution_clock::now();
         render();
         auto renderEnd = std::chrono::high_resolution_clock::now();
         _performanceTimings.renderTime = std::chrono::duration<float>(renderEnd - renderStart).count();
-        
+
         _window->beginImGuiFrame();
-        
+
         // Measure UI time
         auto uiStart = std::chrono::high_resolution_clock::now();
         Gump::renderUI(*this);
         auto uiEnd = std::chrono::high_resolution_clock::now();
         _performanceTimings.uiTime = std::chrono::duration<float>(uiEnd - uiStart).count();
-        
+
         _window->endFrame();
 
         auto frameEnd = std::chrono::high_resolution_clock::now();
@@ -142,10 +152,13 @@ void Gump::Application::update()
 
 void Gump::Application::render()
 {
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    float width  = static_cast<float>(vp[2]);
-    float height = static_cast<float>(vp[3]);
+    // Get viewport size from ImGui's main viewport
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float width = viewport->Size.x;
+    float height = viewport->Size.y;
+    
+    // Set viewport for the main rendering pass
+    glViewport(0, 0, static_cast<int>(width), static_cast<int>(height));
 
     glm::mat4 pv = _camera->getPVMatrix(width, height);
 
@@ -163,9 +176,19 @@ void Gump::Application::render()
     _shader->set("uProjectionView", pv);
     _shader->set("uCanvasSize", glm::vec2(_canvasSize.x, _canvasSize.y));
 
-    for (const auto& layer : _layers) {
-        _textureAtlas->bindPage(layer->texturePageIndex);
-        _shader->set("uTexture", 0);
+    for (size_t i = 0; i < _layers.size(); i++) {
+        const auto& layer = _layers[i];
+        
+        // If this is the last layer and we have an active effect preview, use the preview texture
+        if (i == _layers.size() - 1 && _effectPreviewActive && _effectPreviewTexture != 0) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _effectPreviewTexture);
+            _shader->set("uTexture", 0);
+        } else {
+            _textureAtlas->bindPage(layer->texturePageIndex);
+            _shader->set("uTexture", 0);
+        }
+        
         _shader->set("uTransparency", layer->transparency);
         layer->draw();
     }
@@ -806,9 +829,12 @@ void Gump::Application::sendSelectionToNewLayer()
     int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
     int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
 
+    // Get layer height for Y-flip calculation
+    int layerHeight = static_cast<int>(topLayer->getHeight());
+
     // Calculate selection position in texture
     int texX = layerTexX + static_cast<int>(selMin.x);
-    int texY = layerTexY + static_cast<int>(selMin.y);
+    int texY = layerTexY + (layerHeight - static_cast<int>(selMax.y));
 
     // Create a framebuffer to read from the texture
     GLuint fbo;
@@ -854,4 +880,189 @@ void Gump::Application::sendSelectionToNewLayer()
     } else {
         LOG_ERROR("Failed to add selection to texture atlas");
     }
+}
+
+// Effects system
+std::vector<std::unique_ptr<Gump::Effect>>& Gump::Application::getEffects()
+{
+    return _effects;
+}
+
+void Gump::Application::applySelectedEffect()
+{
+    if (_selectedEffectIndex < 0 || _selectedEffectIndex >= static_cast<int>(_effects.size())) {
+        LOG_WARNING("No effect selected or invalid effect index");
+        return;
+    }
+
+    if (!_selectionState.hasSelection || _layers.empty()) {
+        LOG_WARNING("No selection or no layers available for effect");
+        return;
+    }
+
+    auto& effect = _effects[_selectedEffectIndex];
+    auto& topLayer = _layers.back();
+
+    // Calculate selection bounds in layer space
+    glm::vec2 selMin = _selectionState.getMin();
+    glm::vec2 selMax = _selectionState.getMax();
+
+    // Clamp selection to layer bounds
+    selMin = glm::max(selMin, glm::vec2(0.0f));
+    selMax = glm::min(selMax, glm::vec2(topLayer->getWidth(), topLayer->getHeight()));
+
+    int selWidth = static_cast<int>(selMax.x - selMin.x);
+    int selHeight = static_cast<int>(selMax.y - selMin.y);
+
+    if (selWidth <= 0 || selHeight <= 0) {
+        LOG_WARNING("Invalid selection dimensions for effect");
+        return;
+    }
+
+    // Get the texture page for the top layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(topLayer->texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, *pageTexIdOpt);
+
+    // Get texture dimensions
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Get layer's position in the texture atlas
+    glm::vec2 layerUVMin = topLayer->getUVMin();
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+    
+    // Get layer dimensions for Y-flip calculation
+    int layerHeight = static_cast<int>(topLayer->getHeight());
+
+    // Calculate selection position in texture
+    // X coordinate is straightforward
+    int texX = layerTexX + static_cast<int>(selMin.x);
+    
+    // Y coordinate needs to be flipped because OpenGL textures have origin at bottom-left
+    // while our layer space has origin at top-left
+    int texY = layerTexY + (layerHeight - static_cast<int>(selMax.y));
+
+    // Apply the effect to the texture region
+    effect->apply(*pageTexIdOpt, texWidth, texHeight, texX, texY, selWidth, selHeight);
+
+    LOG_INFO("Applied effect '{}' to selection", effect->getName());
+}
+
+void Gump::Application::renderEffectPreview()
+{
+    if (_effectPreviewIndex < 0 || _effectPreviewIndex >= static_cast<int>(_effects.size())) {
+        return;
+    }
+
+    if (!_selectionState.hasSelection || _layers.empty()) {
+        return;
+    }
+
+    auto& effect = _effects[_effectPreviewIndex];
+    auto& topLayer = _layers.back();
+
+    // Calculate selection bounds in layer space INCLUDING the offset
+    // This is crucial - we need to use the actual moved position
+    glm::vec2 selMin = _selectionState.getMin() + _selectionState.offset;
+    glm::vec2 selMax = _selectionState.getMax() + _selectionState.offset;
+
+    // Clamp selection to layer bounds
+    selMin = glm::max(selMin, glm::vec2(0.0f));
+    selMax = glm::min(selMax, glm::vec2(topLayer->getWidth(), topLayer->getHeight()));
+
+    int selWidth = static_cast<int>(selMax.x - selMin.x);
+    int selHeight = static_cast<int>(selMax.y - selMin.y);
+
+    if (selWidth <= 0 || selHeight <= 0) {
+        return;
+    }
+
+    // Get the texture page for the top layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(topLayer->texturePageIndex);
+    if (!pageTexIdOpt) {
+        return;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, *pageTexIdOpt);
+
+    // Get texture dimensions
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Get layer's position in the texture atlas
+    glm::vec2 layerUVMin = topLayer->getUVMin();
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+    
+    // Get layer dimensions for Y-flip calculation
+    int layerHeight = static_cast<int>(topLayer->getHeight());
+
+    // Calculate selection position in texture
+    int texX = layerTexX + static_cast<int>(selMin.x);
+    int texY = layerTexY + (layerHeight - static_cast<int>(selMax.y));
+
+    // Create preview texture if it doesn't exist or is wrong size
+    if (_effectPreviewTexture == 0 || 
+        _effectPreviewWidth != texWidth || 
+        _effectPreviewHeight != texHeight) {
+        
+        if (_effectPreviewTexture != 0) {
+            glDeleteTextures(1, &_effectPreviewTexture);
+        }
+
+        glGenTextures(1, &_effectPreviewTexture);
+        glBindTexture(GL_TEXTURE_2D, _effectPreviewTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        _effectPreviewWidth = texWidth;
+        _effectPreviewHeight = texHeight;
+    }
+
+    // Copy the original texture to the preview texture
+    GLuint copyFbo;
+    glGenFramebuffers(1, &copyFbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, copyFbo);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *pageTexIdOpt, 0);
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, copyFbo);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, _effectPreviewTexture, 0);
+    
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glDrawBuffer(GL_COLOR_ATTACHMENT1);
+    glBlitFramebuffer(0, 0, texWidth, texHeight, 0, 0, texWidth, texHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &copyFbo);
+
+    // Apply the effect to the preview texture
+    effect->apply(_effectPreviewTexture, texWidth, texHeight, texX, texY, selWidth, selHeight);
+
+    // Mark preview as active
+    _effectPreviewActive = true;
+}
+
+void Gump::Application::setEffectPreviewIndex(int index)
+{
+    _effectPreviewIndex = index;
+    if (index >= 0) {
+        renderEffectPreview();
+    }
+}
+
+void Gump::Application::clearEffectPreview()
+{
+    _effectPreviewIndex = -1;
+    _effectPreviewActive = false;
 }
