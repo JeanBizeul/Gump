@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <glad/glad.h>
 #include <glm/vec2.hpp>
 #include <glm/mat4x4.hpp>
 
@@ -16,6 +17,10 @@ public:
 
     // Render a stroke to the screen (for preview)
     void renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom);
+
+    // Render a stroke directly to a framebuffer/texture (for finalizing)
+    void renderStrokeToTexture(const Stroke& stroke, GLuint targetTexture, int textureWidth, int textureHeight, 
+                                int layerX, int layerY, int layerWidth, int layerHeight);
 
     // Load the brush texture
     bool loadBrushTexture(const std::string& path);

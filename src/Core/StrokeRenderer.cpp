@@ -3,6 +3,7 @@
 #include "Vertex.hpp"
 
 #include <glad/glad.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <stb_image.h>
 
@@ -120,18 +121,18 @@ void StrokeRenderer::generateStrokeGeometry(const Stroke& stroke)
 void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom)
 {
     if (stroke.isEmpty() || !_brushTextureID) return;
-    
+
     // Generate geometry from stroke points
     generateStrokeGeometry(stroke);
-    
+
     if (_pointCount == 0) return;
-    
+
     const auto& settings = stroke.getBrushSettings();
-    
+
     // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
+
     // Use stroke shader
     _strokeShader->use();
     _strokeShader->set("uProjectionView", projectionView);
@@ -141,15 +142,94 @@ void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& project
     _strokeShader->set("uBrushOpacity", settings.opacity);
     _strokeShader->set("uBrushSpacing", settings.spacing);
     _strokeShader->set("uBrushTexture", 0);
-    
+
     // Bind brush texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _brushTextureID);
-    
+
     // Draw points
     glBindVertexArray(_vao);
     glDrawArrays(GL_POINTS, 0, _pointCount);
     glBindVertexArray(0);
-    
+
     glDisable(GL_BLEND);
+}
+
+void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTexture, 
+                                           int textureWidth, int textureHeight,
+                                           int layerX, int layerY, int layerWidth, int layerHeight)
+{
+    if (stroke.isEmpty() || !_brushTextureID) return;
+
+    // Generate geometry from stroke points
+    generateStrokeGeometry(stroke);
+
+    if (_pointCount == 0) return;
+
+    const auto& settings = stroke.getBrushSettings();
+
+    // Save the current viewport BEFORE changing anything
+    GLint savedViewport[4];
+    glGetIntegerv(GL_VIEWPORT, savedViewport);
+
+    // Create framebuffer
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    // Attach the target texture to the framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, targetTexture, 0);
+
+    // Check framebuffer status
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        LOG_ERROR("Framebuffer not complete for stroke rendering");
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &fbo);
+        return;
+    }
+
+    // Set viewport to the layer's region within the texture atlas
+    glViewport(layerX, layerY, layerWidth, layerHeight);
+
+    // Enable blending - use appropriate blend mode based on whether it's an eraser
+    glEnable(GL_BLEND);
+    if (settings.isEraser) {
+        // Eraser: subtract alpha
+        glBlendFuncSeparate(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+    } else {
+        // Normal drawing: standard alpha blending
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    // Create orthographic projection for the layer (in layer-local coordinates)
+    glm::mat4 projection = glm::ortho(0.0f, (float)layerWidth, (float)layerHeight, 0.0f, -1.0f, 1.0f);
+
+    // Use stroke shader
+    _strokeShader->use();
+    _strokeShader->set("uProjectionView", projection);
+    _strokeShader->set("uBrushColor", settings.color);
+    _strokeShader->set("uBrushSize", settings.size); // No zoom scaling for texture rendering
+    _strokeShader->set("uBrushHardness", settings.hardness);
+    _strokeShader->set("uBrushOpacity", settings.opacity);
+    _strokeShader->set("uBrushSpacing", settings.spacing);
+    _strokeShader->set("uBrushTexture", 0);
+
+    // Bind brush texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _brushTextureID);
+
+    // Draw points
+    glBindVertexArray(_vao);
+    glDrawArrays(GL_POINTS, 0, _pointCount);
+    glBindVertexArray(0);
+
+    // Cleanup
+    glDisable(GL_BLEND);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+
+    // Restore the original viewport
+    glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+
+    LOG_DEBUG("Rendered stroke to texture at ({}, {}) with size {}x{}", layerX, layerY, layerWidth, layerHeight);
 }

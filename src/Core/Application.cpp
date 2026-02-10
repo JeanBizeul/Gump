@@ -452,13 +452,43 @@ void Gump::Application::cancelStroke()
 
 void Gump::Application::applyStrokeToLayer(const Stroke& stroke, Layer& layer)
 {
-    // This is a placeholder - you'll implement the actual GPU rendering later
-    LOG_INFO("Applying stroke to layer '{}' (placeholder - implement GPU rendering)", layer.name);
-    
-    // TODO: Implement stroke rendering
-    // 1. Send stroke data to GPU
-    // 2. Render stroke to a framebuffer with the layer texture
-    // 3. Update the layer texture with the result
+    LOG_INFO("Applying stroke to layer '{}'", layer.name);
+
+    // Get the texture page for this layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(layer.texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    GLuint textureID = *pageTexIdOpt;
+
+    // Get texture dimensions
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Get layer's position in the texture atlas
+    glm::vec2 layerUVMin = layer.getUVMin();
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    int layerWidth = static_cast<int>(layer.getWidth());
+    int layerHeight = static_cast<int>(layer.getHeight());
+
+    // Convert stroke points from world coordinates to layer-local coordinates
+    Stroke localStroke(stroke.getBrushSettings());
+    for (const auto& point : stroke.getPoints()) {
+        glm::vec2 localPos = point.position - layer.position;
+        localStroke.addPoint(localPos, point.pressure);
+    }
+
+    // Render the stroke to the layer texture
+    _strokeRenderer->renderStrokeToTexture(localStroke, textureID, texWidth, texHeight,
+                                          layerTexX, layerTexY, layerWidth, layerHeight);
+
+    LOG_INFO("Successfully applied stroke with {} points to layer '{}'", stroke.getPointCount(), layer.name);
 }
 
 void Gump::Application::copySelection()
