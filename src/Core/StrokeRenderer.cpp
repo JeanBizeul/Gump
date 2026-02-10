@@ -202,6 +202,7 @@ void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& project
     _strokeShader->set("uBrushHardness", settings.hardness);
     _strokeShader->set("uBrushOpacity", settings.opacity);
     _strokeShader->set("uBrushSpacing", settings.spacing);
+    _strokeShader->set("uBrushShape", static_cast<int>(settings.shape));
     _strokeShader->set("uBrushTexture", 0);
 
     // Bind brush texture
@@ -273,6 +274,7 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
     _strokeShader->set("uBrushHardness", settings.hardness);
     _strokeShader->set("uBrushOpacity", settings.opacity);
     _strokeShader->set("uBrushSpacing", settings.spacing);
+    _strokeShader->set("uBrushShape", static_cast<int>(settings.shape));
     _strokeShader->set("uBrushTexture", 0);
 
     // Bind brush texture

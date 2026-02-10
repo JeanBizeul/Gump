@@ -12,46 +12,56 @@ void Gump::UI::renderBrushSettings(Gump::Application &app) {
     ImGui::Begin("Brush Settings");
 
     auto& brushSettings = app.getBrushSettings();
-    
+
     ImGui::SeparatorText("Brush Properties");
-    
+
+    // Brush shape selector
+    const char* shapeNames[] = { "Circle", "Square", "Texture" };
+    int currentShape = static_cast<int>(brushSettings.shape);
+    if (ImGui::Combo("Shape", &currentShape, shapeNames, IM_ARRAYSIZE(shapeNames))) {
+        brushSettings.shape = static_cast<BrushSettings::Shape>(currentShape);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Brush shape\nCircle: Round procedural brush\nSquare: Square procedural brush\nTexture: Use loaded brush texture");
+    }
+
     // Brush size slider
     ImGui::SliderFloat("Size", &brushSettings.size, 1.0f, 100.0f, "%.1f px");
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Brush diameter in pixels");
     }
-    
+
     // Brush hardness slider
     ImGui::SliderFloat("Hardness", &brushSettings.hardness, 0.0f, 1.0f, "%.2f");
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Edge hardness\n0 = soft brush, 1 = hard brush");
     }
-    
+
     // Brush opacity slider
     ImGui::SliderFloat("Opacity", &brushSettings.opacity, 0.0f, 1.0f, "%.2f");
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Brush opacity\n0 = transparent, 1 = opaque");
     }
-    
+
     // Brush spacing slider
     ImGui::SliderFloat("Spacing", &brushSettings.spacing, 0.01f, 1.0f, "%.2f");
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Spacing between brush stamps\nRelative to brush size (0.1 = 10%% of size)");
     }
-    
+
     ImGui::Spacing();
     ImGui::SeparatorText("Color");
-    
+
     // Color picker
     ImGui::ColorEdit4("Brush Color", &brushSettings.color.r, 
         ImGuiColorEditFlags_AlphaPreviewHalf | ImGuiColorEditFlags_DisplayRGB);
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Choose brush color and alpha");
     }
-    
+
     ImGui::Spacing();
     ImGui::Separator();
-    
+
     // Display current tool info
     const std::string& currentTool = app.getSelectedTool();
     if (currentTool == "pencil") {
@@ -63,7 +73,7 @@ void Gump::UI::renderBrushSettings(Gump::Application &app) {
     } else {
         ImGui::TextDisabled("Select pencil or eraser tool");
     }
-    
+
     // Show active stroke info if drawing
     if (app.hasActiveStroke()) {
         ImGui::Spacing();
