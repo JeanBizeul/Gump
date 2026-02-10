@@ -162,6 +162,47 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::SetTooltip("Resets translations & rotations");
         }
 
+        // Clear layer button
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 200, 100, 255));
+        if (ImGui::Button(("Clear##" + std::to_string(i)).c_str())) {
+            // Get the texture page for this layer
+            auto pageTexIdOpt = app.getTextureAtlas().getPageTextureID(layer->texturePageIndex);
+            if (pageTexIdOpt) {
+                GLuint textureID = *pageTexIdOpt;
+                
+                // Get texture dimensions
+                glBindTexture(GL_TEXTURE_2D, textureID);
+                GLint texWidth, texHeight;
+                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+                
+                // Get layer's position in the texture atlas
+                glm::vec2 layerUVMin = layer->getUVMin();
+                int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+                int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+                
+                int layerWidth = static_cast<int>(layer->getWidth());
+                int layerHeight = static_cast<int>(layer->getHeight());
+                
+                // Create transparent pixels
+                std::vector<unsigned char> transparentPixels(layerWidth * layerHeight * 4, 0);
+                
+                // Update the texture with transparent pixels
+                glTexSubImage2D(GL_TEXTURE_2D, 0, layerTexX, layerTexY, layerWidth, layerHeight,
+                               GL_RGBA, GL_UNSIGNED_BYTE, transparentPixels.data());
+                
+                LOG_INFO("Cleared layer '{}'", layer->name);
+            } else {
+                LOG_ERROR("Failed to get texture page for layer '{}'", layer->name);
+            }
+        }
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Clear this layer (fill with transparent pixels)");
+        }
+
         // Visibility checkbox
         ImGui::Checkbox(("##visible" + std::to_string(i)).c_str(), &layer->isVisible);
         if (ImGui::IsItemHovered())
