@@ -98,19 +98,80 @@ bool StrokeRenderer::loadBrushTexture(const std::string& path)
 void StrokeRenderer::generateStrokeGeometry(const Stroke& stroke)
 {
     const auto& points = stroke.getPoints();
-    _pointCount = points.size();
+    if (points.size() < 2) {
+        _pointCount = points.size();
 
-    if (_pointCount == 0) return;
+        if (_pointCount == 0) return;
 
-    // Prepare vertex data: [x, y, pressure] for each point
-    std::vector<float> vertexData;
-    vertexData.reserve(_pointCount * 3);
+        // Single point - just render it
+        std::vector<float> vertexData;
+        vertexData.push_back(points[0].position.x);
+        vertexData.push_back(points[0].position.y);
+        vertexData.push_back(points[0].pressure);
 
-    for (const auto& point : points) {
-        vertexData.push_back(point.position.x);
-        vertexData.push_back(point.position.y);
-        vertexData.push_back(point.pressure);
+        glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        return;
     }
+
+    // Generate Catmull-Rom spline control points
+    // Each segment is defined by 4 control points: P0, P1, P2, P3
+    // The curve goes from P1 to P2, using P0 and P3 for smoothness
+
+    const auto& settings = stroke.getBrushSettings();
+    float spacing = settings.size * settings.spacing;
+
+    std::vector<float> vertexData;
+
+    // Add first point
+    vertexData.push_back(points[0].position.x);
+    vertexData.push_back(points[0].position.y);
+    vertexData.push_back(points[0].pressure);
+
+    // Process each segment
+    for (size_t i = 0; i < points.size() - 1; i++) {
+        // Get 4 control points for Catmull-Rom
+        glm::vec2 p0 = (i == 0) ? points[i].position : points[i - 1].position;
+        glm::vec2 p1 = points[i].position;
+        glm::vec2 p2 = points[i + 1].position;
+        glm::vec2 p3 = (i + 2 < points.size()) ? points[i + 2].position : points[i + 1].position;
+
+        float pressure1 = points[i].pressure;
+        float pressure2 = points[i + 1].pressure;
+
+        // Estimate curve length (rough approximation)
+        float chordLength = glm::length(p2 - p1);
+        float controlLength = glm::length(p1 - p0) + glm::length(p2 - p1) + glm::length(p3 - p2);
+        float approxLength = (chordLength + controlLength) * 0.5f;
+
+        // Calculate number of samples based on spacing
+        int numSamples = std::max(1, static_cast<int>(approxLength / spacing));
+
+        // Sample along the Catmull-Rom curve
+        for (int j = 1; j <= numSamples; j++) {
+            float t = static_cast<float>(j) / numSamples;
+
+            // Catmull-Rom basis functions
+            float t2 = t * t;
+            float t3 = t2 * t;
+
+            // Catmull-Rom spline matrix (with tau = 0.5 for uniform parameterization)
+            glm::vec2 position =
+                0.5f * ((2.0f * p1) +
+                        (-p0 + p2) * t +
+                        (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
+                        (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+
+            float pressure = glm::mix(pressure1, pressure2, t);
+
+            vertexData.push_back(position.x);
+            vertexData.push_back(position.y);
+            vertexData.push_back(pressure);
+        }
+    }
+
+    _pointCount = vertexData.size() / 3;
 
     // Upload to GPU
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
