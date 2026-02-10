@@ -232,7 +232,7 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
 
     const auto& settings = stroke.getBrushSettings();
 
-    // Save the current viewport BEFORE changing anything
+    // Save current viewport
     GLint savedViewport[4];
     glGetIntegerv(GL_VIEWPORT, savedViewport);
 
@@ -249,10 +249,11 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
         LOG_ERROR("Framebuffer not complete for stroke rendering");
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &fbo);
+        glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
         return;
     }
 
-    // Set viewport to the layer's region within the texture atlas
+    // Set viewport to the layer's region
     glViewport(layerX, layerY, layerWidth, layerHeight);
 
     // Enable blending - use appropriate blend mode based on whether it's an eraser
@@ -297,7 +298,7 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
-    // Restore the original viewport
+    // Restore viewport
     glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
 
     LOG_DEBUG("Rendered stroke to texture at ({}, {}) with size {}x{}", layerX, layerY, layerWidth, layerHeight);

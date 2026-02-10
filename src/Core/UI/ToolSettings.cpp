@@ -8,6 +8,7 @@
 static void renderMoveToolSettings(Gump::Application &app);
 static void renderSelectionToolSettings(Gump::Application &app);
 static void renderFuzzySelectToolSettings(Gump::Application &app);
+static void renderEffectsSettings(Gump::Application &app);
 
 void Gump::UI::renderToolSettings(Gump::Application &app) {
     // ImGuiWindowClass windowClass;
@@ -22,6 +23,13 @@ void Gump::UI::renderToolSettings(Gump::Application &app) {
     } else if (app.getSelectedTool() == "fuzzy-select") {
         renderFuzzySelectToolSettings(app);
     }
+
+    // Show effects when selection exists
+    if (app.getSelectionState().hasSelection) {
+        ImGui::Separator();
+        renderEffectsSettings(app);
+    }
+
     ImGui::End();
 }
 
@@ -107,4 +115,75 @@ static void renderFuzzySelectToolSettings(Gump::Application &app)
     ImGui::Separator();
 
     renderSelectionToolSettings(app);
+}
+
+static void renderEffectsSettings(Gump::Application &app)
+{
+    ImGui::SeparatorText("Effects");
+
+    auto& effects = app.getEffects();
+    int selectedIndex = app.getSelectedEffectIndex();
+
+    // Effect selection list
+    if (ImGui::BeginListBox("##EffectsList", ImVec2(-1, 150))) {
+        for (size_t i = 0; i < effects.size(); i++) {
+            bool isSelected = (selectedIndex == static_cast<int>(i));
+            if (ImGui::Selectable(effects[i]->getName().c_str(), isSelected)) {
+                app.setSelectedEffectIndex(static_cast<int>(i));
+            }
+
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndListBox();
+    }
+
+    // Show parameters and apply button for selected effect
+    if (selectedIndex >= 0 && selectedIndex < static_cast<int>(effects.size())) {
+        auto& selectedEffect = effects[selectedIndex];
+        auto& params = selectedEffect->getParameters();
+
+        ImGui::Spacing();
+        ImGui::Text("Parameters:");
+        ImGui::Separator();
+
+        // Render parameter controls
+        for (auto& param : params) {
+            switch (param.type) {
+                case Gump::EffectParameter::Type::Float:
+                    ImGui::SliderFloat(param.name.c_str(), &param.floatValue,
+                                      param.minValue, param.maxValue, "%.2f");
+                    break;
+
+                case Gump::EffectParameter::Type::Int:
+                    ImGui::SliderInt(param.name.c_str(), &param.intValue,
+                                    static_cast<int>(param.minValue),
+                                    static_cast<int>(param.maxValue));
+                    break;
+
+                case Gump::EffectParameter::Type::Bool:
+                    ImGui::Checkbox(param.name.c_str(), &param.boolValue);
+                    break;
+
+                case Gump::EffectParameter::Type::Color:
+                    ImGui::ColorEdit4(param.name.c_str(), param.colorValue,
+                                     ImGuiColorEditFlags_AlphaPreviewHalf);
+                    break;
+            }
+        }
+
+        ImGui::Spacing();
+
+        // Apply button
+        if (ImGui::Button("Apply Effect", ImVec2(-1, 0))) {
+            app.applySelectedEffect();
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Apply '%s' to the current selection", selectedEffect->getName().c_str());
+        }
+    } else {
+        ImGui::TextDisabled("Select an effect from the list");
+    }
 }
