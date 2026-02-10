@@ -7,10 +7,12 @@ uniform mat4 uProjectionView;
 uniform float uBrushSize;
 
 out float vPressure;
+out vec2 vWorldPos;  // Pass world position to fragment shader
 
 void main()
 {
     vPressure = aPressure;
+    vWorldPos = aPosition;  // Store world position for global pattern
 
     gl_PointSize = uBrushSize * aPressure;
 

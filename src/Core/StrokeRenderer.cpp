@@ -179,7 +179,7 @@ void StrokeRenderer::generateStrokeGeometry(const Stroke& stroke)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom)
+void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom, float time)
 {
     if (stroke.isEmpty() || !_brushTextureID) return;
 
@@ -193,7 +193,7 @@ void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& project
     // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    
     // Use stroke shader
     _strokeShader->use();
     _strokeShader->set("uProjectionView", projectionView);
@@ -204,6 +204,8 @@ void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& project
     _strokeShader->set("uBrushSpacing", settings.spacing);
     _strokeShader->set("uBrushShape", static_cast<int>(settings.shape));
     _strokeShader->set("uBrushTexture", 0);
+    _strokeShader->set("uIsEraser", settings.isEraser);  // Tell shader if this is an eraser
+    _strokeShader->set("uTime", time);                    // Pass time for animation
 
     // Bind brush texture
     glActiveTexture(GL_TEXTURE0);
@@ -256,8 +258,12 @@ void StrokeRenderer::renderStrokeToTexture(const Stroke& stroke, GLuint targetTe
     // Enable blending - use appropriate blend mode based on whether it's an eraser
     glEnable(GL_BLEND);
     if (settings.isEraser) {
-        // Eraser: subtract alpha
-        glBlendFuncSeparate(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+        // Eraser: only reduce alpha, preserve RGB
+        // We want to write: (existing_RGB, existing_A * (1 - brush_A))
+        glBlendFuncSeparate(
+            GL_ZERO, GL_ONE,                    // RGB: keep existing color
+            GL_ZERO, GL_ONE_MINUS_SRC_ALPHA     // Alpha: multiply by (1 - brush alpha)
+        );
     } else {
         // Normal drawing: standard alpha blending
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

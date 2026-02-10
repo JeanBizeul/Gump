@@ -1,6 +1,7 @@
 #version 330 core
 
 in float vPressure;
+in vec2 vWorldPos;  // World position for global pattern
 
 out vec4 FragColor;
 
@@ -9,6 +10,8 @@ uniform vec4 uBrushColor;
 uniform float uBrushOpacity;
 uniform float uBrushHardness;
 uniform int uBrushShape; // 0 = circle, 1 = square
+uniform bool uIsEraser;  // True if this is an eraser preview
+uniform float uTime;     // For marching ants animation
 
 void main()
 {
@@ -57,9 +60,35 @@ void main()
         }
     }
 
-    // Apply brush color and opacity
-    vec3 color = uBrushColor.rgb;
-    alpha *= uBrushColor.a * uBrushOpacity * vPressure;
+    // Discard if alpha is too low
+    if (alpha < 0.01) {
+        discard;
+    }
 
-    FragColor = vec4(color, alpha);
+    // If this is an eraser preview, show marching ants pattern
+    if (uIsEraser) {
+        // Use WORLD POSITION for globally synchronized pattern
+        float dashLength = 5.0;  // Fixed dash length in world space
+        float dashSpeed = 1.0;    // 4x slower than before (was 2.0)
+
+        // Use world position for global synchronization
+        float perimeter = vWorldPos.x + vWorldPos.y;
+        float dash = mod(perimeter + uTime * dashSpeed, dashLength * 2.0);
+        float dashPattern = step(dashLength, dash);
+
+        // Alternate between black and white
+        vec3 color1 = vec3(0.0, 0.0, 0.0); // Black
+        vec3 color2 = vec3(1.0, 1.0, 1.0); // White
+
+        vec3 color = mix(color1, color2, dashPattern);
+
+        // Use the brush alpha as the outline strength
+        FragColor = vec4(color, alpha * uBrushOpacity * vPressure);
+    } else {
+        // Normal brush rendering
+        vec3 color = uBrushColor.rgb;
+        alpha *= uBrushColor.a * uBrushOpacity * vPressure;
+
+        FragColor = vec4(color, alpha);
+    }
 }

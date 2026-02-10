@@ -16,7 +16,7 @@ public:
     ~StrokeRenderer();
 
     // Render a stroke to the screen (for preview)
-    void renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom);
+    void renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom, float time);
 
     // Render a stroke directly to a framebuffer/texture (for finalizing)
     void renderStrokeToTexture(const Stroke& stroke, GLuint targetTexture, int textureWidth, int textureHeight, 
