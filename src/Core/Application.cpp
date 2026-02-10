@@ -13,6 +13,9 @@
 
 #include "Tools/ToolsFunctions.hpp"
 #include "Effects/InvertEffect.hpp"
+#include "Effects/BlurEffect.hpp"
+#include "Effects/ColorFilterEffect.hpp"
+#include "Effects/NoiseEffect.hpp"
 
 const size_t WindowWidth = 1920;
 const size_t WindowHeight = 1080;
@@ -66,6 +69,9 @@ Gump::Application::Application()
 
         // Initialize effects system
         _effects.push_back(std::make_unique<InvertEffect>());
+        _effects.push_back(std::make_unique<BlurEffect>());
+        _effects.push_back(std::make_unique<ColorFilterEffect>());
+        _effects.push_back(std::make_unique<NoiseEffect>());
 
         // Create a default empty layer
         LOG_DEBUG("Creating default empty layer ...");
