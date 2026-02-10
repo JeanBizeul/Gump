@@ -77,18 +77,40 @@ void Gump::Application::run()
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while (_running) {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+        
         // Update time
         auto currentTime = std::chrono::high_resolution_clock::now();
         _time = std::chrono::duration<float>(currentTime - startTime).count();
 
         _window->pollEvents();
+        
+        // Measure update time
+        auto updateStart = std::chrono::high_resolution_clock::now();
         update();
+        auto updateEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.updateTime = std::chrono::duration<float>(updateEnd - updateStart).count();
 
         _window->beginFrame();
+        
+        // Measure render time
+        auto renderStart = std::chrono::high_resolution_clock::now();
         render();
+        auto renderEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.renderTime = std::chrono::duration<float>(renderEnd - renderStart).count();
+        
         _window->beginImGuiFrame();
+        
+        // Measure UI time
+        auto uiStart = std::chrono::high_resolution_clock::now();
         Gump::renderUI(*this);
+        auto uiEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.uiTime = std::chrono::duration<float>(uiEnd - uiStart).count();
+        
         _window->endFrame();
+
+        auto frameEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.totalFrameTime = std::chrono::duration<float>(frameEnd - frameStart).count();
 
         Input::update();
         if (_window->shouldClose()) _running = false;
@@ -187,8 +209,8 @@ void Gump::Application::render()
     if (_currentStroke && !_currentStroke->isEmpty()) {
         _strokeRenderer->renderStroke(*_currentStroke, pv);
     }
-
-    glfwSwapBuffers(_window->getHandle());
+    
+    // Don't call glfwSwapBuffers here - Window::endFrame() handles it
 }
 
 
@@ -348,6 +370,11 @@ Gump::Camera2D& Gump::Application::getCamera()
 Gump::FuzzySelectSettings& Gump::Application::getFuzzySelectSettings()
 {
     return _fuzzySelectSettings;
+}
+
+Gump::PerformanceTimings& Gump::Application::getPerformanceTimings()
+{
+    return _performanceTimings;
 }
 
 // Brush and stroke management

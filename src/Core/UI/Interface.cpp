@@ -22,6 +22,7 @@ void Gump::renderUI(Gump::Application &app)
     Gump::UI::renderToolSettings(app);
     Gump::UI::renderBrushSettings(app);
     Gump::UI::renderLayers(app);
+    Gump::UI::renderDebugInfo(app);
     Gump::UI::renderResizeCanvasDialog(app);
     Gump::UI::renderManualResizeDialog(app);
 }

@@ -18,6 +18,13 @@
 namespace Gump
 {
 
+struct PerformanceTimings {
+    float updateTime = 0.0f;
+    float renderTime = 0.0f;
+    float uiTime = 0.0f;
+    float totalFrameTime = 0.0f;
+};
+
 struct PendingImport {
     bool isPending = false;
     std::string layerName;
@@ -135,6 +142,9 @@ public:
     void finishStroke();
     void cancelStroke();
     void applyStrokeToLayer(const Stroke &stroke, Layer &layer);
+    
+    // Performance monitoring
+    PerformanceTimings& getPerformanceTimings();
 
 private:
     bool _running = true;
@@ -150,6 +160,9 @@ private:
     BrushSettings _brushSettings;
     std::unique_ptr<Stroke> _currentStroke;
     std::unique_ptr<StrokeRenderer> _strokeRenderer;
+    
+    // Performance monitoring
+    PerformanceTimings _performanceTimings;
 
     float _time = 0.0f;
 
