@@ -13,7 +13,9 @@ Camera2D::Camera2D()
 }
 
 // Movement
-void Camera2D::move(const glm::vec2& delta) { _position += delta / _zoom; }
+void Camera2D::move(const glm::vec2& delta) { 
+    _position += glm::vec2(delta.x, -delta.y) / _zoom; 
+}
 void Camera2D::setPosition(const glm::vec2& pos) { _position = pos; }
 
 // Zoom
@@ -44,7 +46,7 @@ glm::mat4 Camera2D::getViewMatrix(float width, float height) const {
 
 glm::mat4 Camera2D::getProjectionMatrix(float width, float height) const {
     // Center the camera on the window
-    return glm::ortho(0.0f, width, 0.0f, height, -1.0f, 1.0f);
+    return glm::ortho(0.0f, width, height, 0.0f, -1.0f, 1.0f);
 }
 
 glm::mat4 Camera2D::getPVMatrix(float width, float height) const {
