@@ -16,7 +16,7 @@ void main()
         WorldPos.y < 0.0 || WorldPos.y > uCanvasSize.y) {
         discard;
     }
-    
+
     vec4 texColor = texture(uTexture, UV);
     FragColor = vec4(texColor.rgb, texColor.a * uTransparency);
 }
