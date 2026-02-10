@@ -47,11 +47,25 @@ Gump::Application::Application()
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
 
+        // Initialize OpenGL settings
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        // Enable point sprites for brush rendering
+        glEnable(GL_PROGRAM_POINT_SIZE); // Allow shaders to control point size
+        
         // Initialize checkerboard mesh
         updateCheckerboardMesh();
         
         // Initialize selection mask texture
         glGenTextures(1, &_selectionMaskTexture);
+        
+        // Initialize stroke renderer
+        _strokeRenderer = std::make_unique<StrokeRenderer>();
+        
+        // Create a default empty layer
+        LOG_DEBUG("Creating default empty layer ...");
+        addEmptyLayer("Layer 1", 800, 600);
     } catch (const std::exception& e) {
         LOG_ERROR("Could not create window: {}", e.what());
         throw std::runtime_error("Could not create window");
@@ -63,18 +77,40 @@ void Gump::Application::run()
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while (_running) {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+        
         // Update time
         auto currentTime = std::chrono::high_resolution_clock::now();
         _time = std::chrono::duration<float>(currentTime - startTime).count();
 
         _window->pollEvents();
+        
+        // Measure update time
+        auto updateStart = std::chrono::high_resolution_clock::now();
         update();
+        auto updateEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.updateTime = std::chrono::duration<float>(updateEnd - updateStart).count();
 
         _window->beginFrame();
+        
+        // Measure render time
+        auto renderStart = std::chrono::high_resolution_clock::now();
         render();
+        auto renderEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.renderTime = std::chrono::duration<float>(renderEnd - renderStart).count();
+        
         _window->beginImGuiFrame();
+        
+        // Measure UI time
+        auto uiStart = std::chrono::high_resolution_clock::now();
         Gump::renderUI(*this);
+        auto uiEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.uiTime = std::chrono::duration<float>(uiEnd - uiStart).count();
+        
         _window->endFrame();
+
+        auto frameEnd = std::chrono::high_resolution_clock::now();
+        _performanceTimings.totalFrameTime = std::chrono::duration<float>(frameEnd - frameStart).count();
 
         Input::update();
         if (_window->shouldClose()) _running = false;
@@ -168,6 +204,13 @@ void Gump::Application::render()
             _selectionMesh->draw();
         }
     }
+
+    // Render active stroke (preview)
+    if (_currentStroke && !_currentStroke->isEmpty()) {
+        _strokeRenderer->renderStroke(*_currentStroke, pv, _camera->getZoom(), _time);
+    }
+    
+    // Don't call glfwSwapBuffers here - Window::endFrame() handles it
 }
 
 
@@ -208,6 +251,64 @@ void Gump::Application::addLayer(const std::string &name, size_t width, size_t h
     glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID)
 {
     _layers.push_back(std::make_unique<Layer>(name, width, height, uvMin, uvMax, textureID));
+}
+
+void Gump::Application::addEmptyLayer(const std::string &name, size_t width, size_t height)
+{
+    // Generate a unique name if the requested name is already taken
+    std::string uniqueName = generateUniqueLayerName(name);
+    
+    LOG_INFO("Creating empty layer '{}' with size {}x{}", uniqueName, width, height);
+    
+    // Create transparent pixels (RGBA with all zeros)
+    std::vector<unsigned char> emptyPixels(width * height * 4, 0);
+    
+    // Add the empty image to the texture atlas
+    if (_textureAtlas->addImageFromPixels(uniqueName, width, height, emptyPixels)) {
+        // Get UV coordinates for the new texture
+        auto uvRectOpt = _textureAtlas->getUVRect(uniqueName);
+        if (uvRectOpt) {
+            // Create the layer
+            addLayer(uniqueName, width, height, uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+            LOG_INFO("Successfully created empty layer '{}'", uniqueName);
+        } else {
+            LOG_ERROR("Failed to get UV coordinates for empty layer '{}'", uniqueName);
+        }
+    } else {
+        LOG_ERROR("Failed to add empty layer '{}' to texture atlas", uniqueName);
+    }
+}
+
+bool Gump::Application::isLayerNameTaken(const std::string& name, size_t excludeIndex) const
+{
+    for (size_t i = 0; i < _layers.size(); i++) {
+        if (i == excludeIndex) {
+            continue; // Skip the excluded layer (used when renaming)
+        }
+        if (_layers[i]->name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string Gump::Application::generateUniqueLayerName(const std::string& baseName) const
+{
+    // If the base name is not taken, use it as-is
+    if (!isLayerNameTaken(baseName)) {
+        return baseName;
+    }
+    
+    // Otherwise, append a number to make it unique
+    int counter = 1;
+    std::string uniqueName;
+    
+    do {
+        uniqueName = baseName + " (" + std::to_string(counter) + ")";
+        counter++;
+    } while (isLayerNameTaken(uniqueName));
+    
+    return uniqueName;
 }
 
 std::vector<std::unique_ptr<Gump::Layer>> &Gump::Application::getLayers()
@@ -269,6 +370,125 @@ Gump::Camera2D& Gump::Application::getCamera()
 Gump::FuzzySelectSettings& Gump::Application::getFuzzySelectSettings()
 {
     return _fuzzySelectSettings;
+}
+
+Gump::PerformanceTimings& Gump::Application::getPerformanceTimings()
+{
+    return _performanceTimings;
+}
+
+// Brush and stroke management
+Gump::BrushSettings& Gump::Application::getBrushSettings()
+{
+    return _brushSettings;
+}
+
+std::unique_ptr<Gump::Stroke>& Gump::Application::getCurrentStroke()
+{
+    return _currentStroke;
+}
+
+bool Gump::Application::hasActiveStroke() const
+{
+    return _currentStroke != nullptr;
+}
+
+void Gump::Application::startStroke(const glm::vec2& position, float pressure)
+{
+    if (_currentStroke) {
+        LOG_WARNING("Starting new stroke while one is already active - cancelling previous stroke");
+        _currentStroke.reset();
+    }
+    
+    _currentStroke = std::make_unique<Stroke>(_brushSettings);
+    _currentStroke->addPoint(position, pressure);
+    
+    LOG_DEBUG("Stroke started at ({}, {}) with {} points", position.x, position.y, _currentStroke->getPointCount());
+}
+
+void Gump::Application::continueStroke(const glm::vec2& position, float pressure)
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Attempting to continue stroke that hasn't been started");
+        return;
+    }
+    
+    _currentStroke->addPoint(position, pressure);
+}
+
+void Gump::Application::finishStroke()
+{
+    if (!_currentStroke) {
+        LOG_WARNING("Attempting to finish stroke that hasn't been started");
+        return;
+    }
+    
+    if (_currentStroke->isEmpty()) {
+        LOG_WARNING("Finishing empty stroke");
+        _currentStroke.reset();
+        return;
+    }
+    
+    LOG_INFO("Finishing stroke with {} points", _currentStroke->getPointCount());
+    
+    // Apply stroke to the top layer
+    if (!_layers.empty()) {
+        applyStrokeToLayer(*_currentStroke, *_layers.back());
+    } else {
+        LOG_WARNING("No layers available to apply stroke to");
+    }
+    
+    // Clear the current stroke
+    _currentStroke.reset();
+}
+
+void Gump::Application::cancelStroke()
+{
+    if (_currentStroke) {
+        LOG_INFO("Stroke cancelled");
+        _currentStroke.reset();
+    }
+}
+
+void Gump::Application::applyStrokeToLayer(const Stroke& stroke, Layer& layer)
+{
+    LOG_INFO("Applying stroke to layer '{}'", layer.name);
+
+    // Get the texture page for this layer
+    auto pageTexIdOpt = _textureAtlas->getPageTextureID(layer.texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return;
+    }
+
+    GLuint textureID = *pageTexIdOpt;
+
+    // Get texture dimensions
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Get layer's position in the texture atlas
+    glm::vec2 layerUVMin = layer.getUVMin();
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    int layerWidth = static_cast<int>(layer.getWidth());
+    int layerHeight = static_cast<int>(layer.getHeight());
+
+    // Convert stroke points from world coordinates to layer-local coordinates
+    Stroke localStroke(stroke.getBrushSettings());
+    for (const auto& point : stroke.getPoints()) {
+        glm::vec2 localPos = point.position - layer.position;
+        localStroke.addPoint(localPos, point.pressure);
+    }
+
+    // Render the stroke to the layer texture
+    _strokeRenderer->renderStrokeToTexture(localStroke, textureID, texWidth, texHeight,
+                                          layerTexX, layerTexY, layerWidth, layerHeight);
+
+    LOG_INFO("Successfully applied stroke with {} points to layer '{}'", stroke.getPointCount(), layer.name);
 }
 
 void Gump::Application::copySelection()

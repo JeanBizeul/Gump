@@ -12,9 +12,18 @@
 #include "TextureAtlas.hpp"
 #include "Camera2D.hpp"
 #include "Input.hpp"
+#include "Stroke.hpp"
+#include "StrokeRenderer.hpp"
 
 namespace Gump
 {
+
+struct PerformanceTimings {
+    float updateTime = 0.0f;
+    float renderTime = 0.0f;
+    float uiTime = 0.0f;
+    float totalFrameTime = 0.0f;
+};
 
 struct PendingImport {
     bool isPending = false;
@@ -74,7 +83,6 @@ struct SelectionState {
 
     void clearMask() {
         hasMask = false;
-        mask.clear();
         maskWidth = 0;
         maskHeight = 0;
     }
@@ -82,69 +90,79 @@ struct SelectionState {
 
 class Application
 {
- public:
+public:
     Application();
     ~Application() = default;
-
     void run();
     void stop();
-
     bool canLayerMoveUp(size_t index) const;
     bool canLayerMoveDown(size_t index) const;
     void moveLayerUp(size_t index);
     void moveLayerDown(size_t index);
     void addLayer(const std::string &name, size_t width, size_t height,
-      glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
+                  glm::vec2 uvMin, glm::vec2 uvMax, size_t textureID);
+    void addEmptyLayer(const std::string &name, size_t width, size_t height);
     size_t getLayerCount() const;
     Layer &getLayer(size_t index) const;
     std::vector<std::unique_ptr<Layer>> &getLayers();
-
     OpenGLUtils::Shader &getShader();
     OpenGLUtils::TextureAtlas &getTextureAtlas();
-
     glm::uvec2 getWindowSize() const;
-    Camera2D& getCamera();
-
+    Camera2D &getCamera();
     // Canvas management
     glm::uvec2 getCanvasSize() const;
     void setCanvasSize(glm::uvec2 size);
-
     // Pending import
-    PendingImport& getPendingImport();
-
+    PendingImport &getPendingImport();
     // Manual canvas resize
-    ResizeCanvasRequest& getResizeCanvasRequest();
-
-    void setSelectedTool(const std::string& tool);
-    const std::string& getSelectedTool() const;
-
+    ResizeCanvasRequest &getResizeCanvasRequest();
+    void setSelectedTool(const std::string &tool);
+    const std::string &getSelectedTool() const;
     // Selection management
-    SelectionState& getSelectionState();
+    SelectionState &getSelectionState();
     void updateSelectionMesh();
-
     // Fuzzy select settings
-    FuzzySelectSettings& getFuzzySelectSettings();
-
+    FuzzySelectSettings &getFuzzySelectSettings();
     // Clipboard operations
-    Clipboard& getClipboard();
+    Clipboard &getClipboard();
     void copySelection();
     void cutSelection();
     void pasteClipboard();
-
     // Extract pixels from selection and create a new layer
     void sendSelectionToNewLayer();
+    // Layer name validation
+    bool isLayerNameTaken(const std::string &name, size_t excludeIndex = -1) const;
+    std::string generateUniqueLayerName(const std::string &baseName) const;
+    // Brush and stroke management
+    BrushSettings &getBrushSettings();
+    std::unique_ptr<Stroke> &getCurrentStroke();
+    bool hasActiveStroke() const;
+    void startStroke(const glm::vec2 &position, float pressure = 1.0f);
+    void continueStroke(const glm::vec2 &position, float pressure = 1.0f);
+    void finishStroke();
+    void cancelStroke();
+    void applyStrokeToLayer(const Stroke &stroke, Layer &layer);
+    
+    // Performance monitoring
+    PerformanceTimings& getPerformanceTimings();
 
- private:
+private:
     bool _running = true;
     glm::uvec2 _windowSize;
     glm::uvec2 _canvasSize;
     PendingImport _pendingImport;
     ResizeCanvasRequest _resizeCanvasRequest;
     Clipboard _clipboard;
-
     std::string _selectedTool = "move";
     SelectionState _selectionState;
     FuzzySelectSettings _fuzzySelectSettings;
+    // Brush and stroke state
+    BrushSettings _brushSettings;
+    std::unique_ptr<Stroke> _currentStroke;
+    std::unique_ptr<StrokeRenderer> _strokeRenderer;
+    
+    // Performance monitoring
+    PerformanceTimings _performanceTimings;
 
     float _time = 0.0f;
 
@@ -158,7 +176,7 @@ class Application
     std::unique_ptr<OpenGLUtils::Mesh> _checkerboardMesh;
     std::unique_ptr<Camera2D> _camera;
     std::unique_ptr<OpenGLUtils::Mesh> _selectionMesh;
-    
+
     // Selection mask texture for fuzzy select
     GLuint _selectionMaskTexture = 0;
 
@@ -167,4 +185,5 @@ class Application
     void updateCheckerboardMesh();
     void updateSelectionMaskTexture();
 };
+
 }
