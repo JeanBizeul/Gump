@@ -207,7 +207,7 @@ void Gump::Application::render()
 
     // Render active stroke (preview)
     if (_currentStroke && !_currentStroke->isEmpty()) {
-        _strokeRenderer->renderStroke(*_currentStroke, pv);
+        _strokeRenderer->renderStroke(*_currentStroke, pv, _camera->getZoom());
     }
     
     // Don't call glfwSwapBuffers here - Window::endFrame() handles it

@@ -15,7 +15,7 @@ public:
     ~StrokeRenderer();
 
     // Render a stroke to the screen (for preview)
-    void renderStroke(const Stroke& stroke, const glm::mat4& projectionView);
+    void renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom);
 
     // Load the brush texture
     bool loadBrushTexture(const std::string& path);

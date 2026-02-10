@@ -117,39 +117,39 @@ void StrokeRenderer::generateStrokeGeometry(const Stroke& stroke)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& projectionView)
+void StrokeRenderer::renderStroke(const Stroke& stroke, const glm::mat4& projectionView, float cameraZoom)
 {
     if (stroke.isEmpty() || !_brushTextureID) return;
-
+    
     // Generate geometry from stroke points
     generateStrokeGeometry(stroke);
-
+    
     if (_pointCount == 0) return;
-
+    
     const auto& settings = stroke.getBrushSettings();
-
+    
     // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    
     // Use stroke shader
     _strokeShader->use();
     _strokeShader->set("uProjectionView", projectionView);
     _strokeShader->set("uBrushColor", settings.color);
-    _strokeShader->set("uBrushSize", settings.size);
+    _strokeShader->set("uBrushSize", settings.size * cameraZoom); // Scale with zoom
     _strokeShader->set("uBrushHardness", settings.hardness);
     _strokeShader->set("uBrushOpacity", settings.opacity);
     _strokeShader->set("uBrushSpacing", settings.spacing);
     _strokeShader->set("uBrushTexture", 0);
-
+    
     // Bind brush texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _brushTextureID);
-
+    
     // Draw points
     glBindVertexArray(_vao);
     glDrawArrays(GL_POINTS, 0, _pointCount);
     glBindVertexArray(0);
-
+    
     glDisable(GL_BLEND);
 }
