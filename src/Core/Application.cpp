@@ -47,11 +47,21 @@ Gump::Application::Application()
         LOG_DEBUG("Initializing input ...");
         Input::initialize(_window->getHandle());
 
+        // Initialize OpenGL settings
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        // Enable point sprites for brush rendering
+        glEnable(GL_PROGRAM_POINT_SIZE); // Allow shaders to control point size
+        
         // Initialize checkerboard mesh
         updateCheckerboardMesh();
         
         // Initialize selection mask texture
         glGenTextures(1, &_selectionMaskTexture);
+        
+        // Initialize stroke renderer
+        _strokeRenderer = std::make_unique<StrokeRenderer>();
         
         // Create a default empty layer
         LOG_DEBUG("Creating default empty layer ...");
@@ -172,6 +182,13 @@ void Gump::Application::render()
             _selectionMesh->draw();
         }
     }
+
+    // Render active stroke (preview)
+    if (_currentStroke && !_currentStroke->isEmpty()) {
+        _strokeRenderer->renderStroke(*_currentStroke, pv);
+    }
+
+    glfwSwapBuffers(_window->getHandle());
 }
 
 
