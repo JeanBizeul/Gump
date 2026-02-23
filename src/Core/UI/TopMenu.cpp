@@ -3,9 +3,8 @@
 #include <imgui.h>
 
 #include "Application.hpp"
-
 #include "Logger.hpp"
-
+#include "Actions.hpp"
 #include "Actions/TopMenuActions.hpp"
 
 void Gump::UI::renderTopMenu(Application &app)
@@ -25,10 +24,10 @@ void Gump::UI::renderTopMenu(Application &app)
                 }
             }
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
-                auto result = Gump::Actions::TopMenu::saveFile(app);
-                if (!result) {
-                    LOG_ERROR("Failed to save file: {}", result.error());
-                }
+                Gump::Actions::saveFile(app);
+            }
+            if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) {
+                Gump::Actions::saveFileAs(app);
             }
             if (ImGui::MenuItem("Export", "Ctrl+E")) {
                 auto result = Gump::Actions::TopMenu::exportFile(app);

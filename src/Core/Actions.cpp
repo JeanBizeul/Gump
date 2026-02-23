@@ -4,6 +4,161 @@
 #include "Logger.hpp"
 #include "Actions/TopMenuActions.hpp"
 
+#include <fstream>
+#include <filesystem>
+#include <vector>
+#include <cstring>
+#include "Utils/Utils.hpp"
+
+// Forward declare stb_image_write functions (implementation is in another TU)
+extern "C" {
+    int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+}
+
+// Helper function to export a layer as PNG
+static bool exportLayerAsPNG(Gump::Application& app, Gump::Layer& layer, const std::string& filepath) {
+    auto& textureAtlas = app.getTextureAtlas();
+    
+    // Get the texture page for this layer
+    auto pageTexIdOpt = textureAtlas.getPageTextureID(layer.texturePageIndex);
+    if (!pageTexIdOpt) {
+        LOG_ERROR("Failed to get texture page for layer");
+        return false;
+    }
+
+    GLuint textureID = *pageTexIdOpt;
+
+    // Get texture dimensions
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLint texWidth, texHeight;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+
+    // Get layer's position in the texture atlas
+    glm::vec2 layerUVMin = layer.getUVMin();
+    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+
+    int layerWidth = static_cast<int>(layer.getWidth());
+    int layerHeight = static_cast<int>(layer.getHeight());
+
+    // Read pixels from the GPU texture
+    std::vector<unsigned char> pixels(layerWidth * layerHeight * 4);
+
+    // Create a framebuffer to read from the texture
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+        glReadPixels(layerTexX, layerTexY, layerWidth, layerHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    } else {
+        LOG_ERROR("Framebuffer incomplete, cannot read pixels");
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &fbo);
+        return false;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+
+    // Flip pixels vertically (OpenGL reads bottom-to-top)
+    std::vector<unsigned char> flippedPixels(layerWidth * layerHeight * 4);
+    for (int y = 0; y < layerHeight; y++) {
+        std::memcpy(
+            &flippedPixels[y * layerWidth * 4],
+            &pixels[(layerHeight - 1 - y) * layerWidth * 4],
+            layerWidth * 4
+        );
+    }
+
+    // Write PNG using stb_image_write
+    if (!stbi_write_png(filepath.c_str(), layerWidth, layerHeight, 4, flippedPixels.data(), layerWidth * 4)) {
+        LOG_ERROR("Failed to write PNG file: {}", filepath);
+        return false;
+    }
+
+    return true;
+}
+
+// Helper function to perform the actual save operation
+static bool performSave(Gump::Application& app, const std::string& filepath) {
+    namespace fs = std::filesystem;
+    
+    // Extract directory name from filepath (remove extension if present)
+    fs::path path(filepath);
+    std::string dirName = path.stem().string();
+    fs::path saveDir = path.parent_path() / dirName;
+    
+    // Create the save directory
+    try {
+        if (fs::exists(saveDir)) {
+            LOG_WARNING("Save directory already exists, overwriting: {}", saveDir.string());
+            fs::remove_all(saveDir);
+        }
+        fs::create_directories(saveDir);
+    } catch (const fs::filesystem_error& e) {
+        LOG_ERROR("Failed to create save directory: {}", e.what());
+        return false;
+    }
+
+    LOG_INFO("Saving project to: {}", saveDir.string());
+
+    // Create config file
+    fs::path configPath = saveDir / "project.cfg";
+    std::ofstream configFile(configPath);
+    if (!configFile.is_open()) {
+        LOG_ERROR("Failed to create config file: {}", configPath.string());
+        return false;
+    }
+
+    // Write metadata
+    auto& layers = app.getLayers();
+    auto canvasSize = app.getCanvasSize();
+    
+    configFile << "[Project]\n";
+    configFile << "CanvasWidth=" << canvasSize.x << "\n";
+    configFile << "CanvasHeight=" << canvasSize.y << "\n";
+    configFile << "LayerCount=" << layers.size() << "\n\n";
+
+    // Export each layer
+    for (size_t i = 0; i < layers.size(); i++) {
+        auto& layer = layers[i];
+        
+        configFile << "[Layer" << i << "]\n";
+        configFile << "Name=" << layer->name << "\n";
+        configFile << "Width=" << layer->getWidth() << "\n";
+        configFile << "Height=" << layer->getHeight() << "\n";
+        configFile << "PositionX=" << layer->position.x << "\n";
+        configFile << "PositionY=" << layer->position.y << "\n";
+        configFile << "Transparency=" << layer->transparency << "\n";
+        configFile << "Visible=" << (layer->isVisible ? "1" : "0") << "\n";
+        
+        // Generate filename for this layer
+        std::string layerFilename = "layer_" + std::to_string(i) + ".png";
+        configFile << "File=" << layerFilename << "\n\n";
+        
+        // Export layer as PNG
+        fs::path layerPath = saveDir / layerFilename;
+        if (!exportLayerAsPNG(app, *layer, layerPath.string())) {
+            LOG_ERROR("Failed to export layer {}: {}", i, layer->name);
+            configFile.close();
+            return false;
+        }
+        
+        LOG_INFO("Exported layer {}: {} ({}x{})", i, layer->name, layer->getWidth(), layer->getHeight());
+    }
+
+    configFile.close();
+    LOG_INFO("Project saved successfully to: {}", saveDir.string());
+    
+    // Update the current file path
+    app.setCurrentFilePath(filepath);
+    
+    return true;
+}
+
 namespace Gump {
 namespace Actions {
 
@@ -20,12 +175,42 @@ void openFile(Application& app) {
 
 void saveFile(Application& app) {
     LOG_INFO("Action: Save File");
-    TopMenu::saveFile(app);
+    
+    // If no current file path, behave like Save As
+    if (app.getCurrentFilePath().empty()) {
+        saveFileAs(app);
+        return;
+    }
+    
+    // Save to the current file path
+    if (!performSave(app, app.getCurrentFilePath())) {
+        LOG_ERROR("Failed to save project");
+    }
 }
 
 void saveFileAs(Application& app) {
     LOG_INFO("Action: Save File As");
-    // TODO: Implement save as dialog (different from regular save)
+    
+    // Prompt user for save location
+    std::string filepath = Gump::Utils::saveFilePickerDialog(
+        "Save Project As",
+        "Gump Project|*.gump|All Files|*.*"
+    );
+    
+    if (filepath.empty()) {
+        LOG_INFO("Save cancelled by user");
+        return;
+    }
+    
+    // Ensure the file has a .gump extension
+    if (filepath.find(".gump") == std::string::npos) {
+        filepath += ".gump";
+    }
+    
+    // Perform the save
+    if (!performSave(app, filepath)) {
+        LOG_ERROR("Failed to save project");
+    }
 }
 
 void exportFile(Application& app) {

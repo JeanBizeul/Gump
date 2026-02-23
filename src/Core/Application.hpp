@@ -181,8 +181,13 @@ public:
     // Apply style settings from preferences to ImGui
     void applyStyleSettingsFromPreferences();
 
+    // File management
+    const std::string& getCurrentFilePath() const { return _currentFilePath; }
+    void setCurrentFilePath(const std::string& path) { _currentFilePath = path; }
+
 private:
     bool _running = true;
+    std::string _currentFilePath; // Current save file path
     glm::uvec2 _windowSize;
     glm::uvec2 _canvasSize;
     PendingImport _pendingImport;
