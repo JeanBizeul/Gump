@@ -17,5 +17,9 @@ namespace UI {
     void renderResizeCanvasDialog(Gump::Application &app);
     void renderManualResizeDialog(Gump::Application &app);
     void renderDebugInfo(Gump::Application &app);
+    void renderPreferences(Gump::Application &app);
 }
 }
+
+// Include style utilities
+#include "UIStyle.hpp"

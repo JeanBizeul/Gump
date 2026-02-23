@@ -91,6 +91,13 @@ void Gump::UI::renderTopMenu(Application &app)
                     LOG_ERROR("Failed to paste action: {}", result.error());
                 }
             }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Preferences...", "Ctrl+,")) {
+                app.openPreferences();
+            }
+
             ImGui::EndMenu();
         }
 

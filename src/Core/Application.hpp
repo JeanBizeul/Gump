@@ -15,6 +15,9 @@
 #include "Stroke.hpp"
 #include "StrokeRenderer.hpp"
 #include "Effect.hpp"
+#include "ShortcutManager.hpp"
+#include "ActionRegistry.hpp"
+#include "PreferencesManager.hpp"
 
 namespace Gump
 {
@@ -110,6 +113,7 @@ public:
     OpenGLUtils::TextureAtlas &getTextureAtlas();
     glm::uvec2 getWindowSize() const;
     Camera2D &getCamera();
+    void resetCameraZoom() { _camera->resetZoom(); }
     // Canvas management
     glm::uvec2 getCanvasSize() const;
     void setCanvasSize(glm::uvec2 size);
@@ -162,6 +166,18 @@ public:
     // Performance monitoring
     PerformanceTimings& getPerformanceTimings();
 
+    // Preferences
+    void openPreferences() { _preferencesOpen = true; }
+    void closePreferences();
+    bool isPreferencesOpen() const { return _preferencesOpen; }
+    bool* getPreferencesOpenPtr() { return &_preferencesOpen; }
+    
+    // Shortcut management
+    ShortcutManager& getShortcutManager() { return _shortcutManager; }
+    
+    // Preferences management
+    PreferencesManager& getPreferencesManager() { return _preferencesManager; }
+
 private:
     bool _running = true;
     glm::uvec2 _windowSize;
@@ -206,6 +222,10 @@ private:
     int _effectPreviewWidth = 0;
     int _effectPreviewHeight = 0;
     bool _effectPreviewActive = false;
+
+    bool _preferencesOpen = false;
+    ShortcutManager _shortcutManager;
+    PreferencesManager _preferencesManager;
 
     void update();
     void render();

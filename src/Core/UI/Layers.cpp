@@ -1,4 +1,5 @@
 #include "UI/UI.hpp"
+#include "UI/UIStyle.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
@@ -8,9 +9,6 @@
 #include "Application.hpp"
 
 void Gump::UI::renderLayers(Gump::Application &app) {
-    // ImGuiWindowClass windowClass;
-    // windowClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
-    // ImGui::SetNextWindowClass(&windowClass);
     ImGui::Begin("Layers");
 
     // Button to add new empty layer
@@ -32,43 +30,14 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         }
     }
 
-    for (size_t i = 0; i < app.getLayerCount(); i++) {
+    // Iterate in reverse order so the top layer (last in vector) appears at the top of the UI
+    for (int idx = app.getLayerCount() - 1; idx >= 0; idx--) {
+        size_t i = static_cast<size_t>(idx);
         Layer* layer = &app.getLayer(i);
 
         ImGui::PushID(static_cast<int>(i));
 
-        // Calculate the size of the layer item first
-        float itemHeight = 80.0f; // Approximate height for the layer item
-        float itemWidth = ImGui::GetContentRegionAvail().x;
-
-        // Create an invisible button that covers the entire layer item for drag-and-drop
-        ImGui::InvisibleButton(("##dragarea" + std::to_string(i)).c_str(), ImVec2(itemWidth, itemHeight));
-        
-        // Drag-and-drop source: make this layer draggable
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-            // Set payload to carry the layer index
-            ImGui::SetDragDropPayload("LAYER_REORDER", &i, sizeof(size_t));
-            ImGui::Text("Reordering: %s", layer->name.c_str());
-            ImGui::EndDragDropSource();
-        }
-
-        // Drag-and-drop target: accept drops to reorder
-        if (ImGui::BeginDragDropTarget()) {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("LAYER_REORDER")) {
-                size_t draggedIdx = *(const size_t*)payload->Data;
-                if (draggedIdx != i) {
-                    // Swap the layers
-                    std::swap(app.getLayers()[draggedIdx], app.getLayers()[i]);
-                    LOG_INFO("Moved layer from {} to {}", draggedIdx, i);
-                }
-            }
-            ImGui::EndDragDropTarget();
-        }
-
-        // Draw the actual layer content over the invisible button
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - itemHeight);
-
-        // Start a group for the entire layer item (for drag-and-drop)
+        // Start a group for the entire layer item
         ImGui::BeginGroup();
 
         // Layer thumbnail preview
@@ -89,8 +58,6 @@ void Gump::UI::renderLayers(Gump::Application &app) {
                 thumbnailSize = ImVec2(thumbSize * aspect, thumbSize);
             }
 
-            // ImGui uses standard UV coordinates (top-left is min, bottom-right is max)
-            // Our layer UVs are already set up correctly, just use them directly
             ImGui::Image(texId, thumbnailSize,
                         ImVec2(uvMin.x, uvMin.y),  // Top-left UV
                         ImVec2(uvMax.x, uvMax.y)); // Bottom-right UV
@@ -161,18 +128,22 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
         }
         
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255,100,100,255));
-        if (ImGui::Button(("Delete##" + std::to_string(i)).c_str())) {
-            ImGui::PopStyleColor();
-            if (!canDelete) {
-                ImGui::PopItemFlag();
-                ImGui::PopStyleVar();
+        // Use DangerButton style for delete
+        {
+            auto dangerStyle = UI::StylePreset::DangerButton();
+            if (ImGui::Button(("Delete##" + std::to_string(i)).c_str())) {
+                // Mark this layer for deletion instead of deleting immediately
+                // We need to finish the current frame's UI rendering first
+                LOG_INFO("Marking layer '{}' for deletion", layer->name);
+                
+                // Store the index to delete after the UI loop
+                static size_t layerToDelete = static_cast<size_t>(-1);
+                layerToDelete = i;
+                
+                // Set a flag to delete after EndChild
+                ImGui::GetIO().UserData = (void*)layerToDelete;
             }
-            app.getLayers().erase(app.getLayers().begin() + i);
-            ImGui::End();
-            return; // Avoid going to bad layers ids
         }
-        ImGui::PopStyleColor();
         
         if (!canDelete) {
             ImGui::PopItemFlag();
@@ -198,42 +169,43 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             ImGui::SetTooltip("Resets translations & rotations");
         }
 
-        // Clear layer button
+        // Clear layer button with warning style
         ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 200, 100, 255));
-        if (ImGui::Button(("Clear##" + std::to_string(i)).c_str())) {
-            // Get the texture page for this layer
-            auto pageTexIdOpt = app.getTextureAtlas().getPageTextureID(layer->texturePageIndex);
-            if (pageTexIdOpt) {
-                GLuint textureID = *pageTexIdOpt;
-                
-                // Get texture dimensions
-                glBindTexture(GL_TEXTURE_2D, textureID);
-                GLint texWidth, texHeight;
-                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
-                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
-                
-                // Get layer's position in the texture atlas
-                glm::vec2 layerUVMin = layer->getUVMin();
-                int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
-                int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
-                
-                int layerWidth = static_cast<int>(layer->getWidth());
-                int layerHeight = static_cast<int>(layer->getHeight());
-                
-                // Create transparent pixels
-                std::vector<unsigned char> transparentPixels(layerWidth * layerHeight * 4, 0);
-                
-                // Update the texture with transparent pixels
-                glTexSubImage2D(GL_TEXTURE_2D, 0, layerTexX, layerTexY, layerWidth, layerHeight,
-                               GL_RGBA, GL_UNSIGNED_BYTE, transparentPixels.data());
-                
-                LOG_INFO("Cleared layer '{}'", layer->name);
-            } else {
-                LOG_ERROR("Failed to get texture page for layer '{}'", layer->name);
+        {
+            auto warningStyle = UI::StylePreset::WarningText();
+            if (ImGui::Button(("Clear##" + std::to_string(i)).c_str())) {
+                // Get the texture page for this layer
+                auto pageTexIdOpt = app.getTextureAtlas().getPageTextureID(layer->texturePageIndex);
+                if (pageTexIdOpt) {
+                    GLuint textureID = *pageTexIdOpt;
+                    
+                    // Get texture dimensions
+                    glBindTexture(GL_TEXTURE_2D, textureID);
+                    GLint texWidth, texHeight;
+                    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+                    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+                    
+                    // Get layer's position in the texture atlas
+                    glm::vec2 layerUVMin = layer->getUVMin();
+                    int layerTexX = static_cast<int>(layerUVMin.x * texWidth);
+                    int layerTexY = static_cast<int>(layerUVMin.y * texHeight);
+                    
+                    int layerWidth = static_cast<int>(layer->getWidth());
+                    int layerHeight = static_cast<int>(layer->getHeight());
+                    
+                    // Create transparent pixels
+                    std::vector<unsigned char> transparentPixels(layerWidth * layerHeight * 4, 0);
+                    
+                    // Update the texture with transparent pixels
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, layerTexX, layerTexY, layerWidth, layerHeight,
+                                   GL_RGBA, GL_UNSIGNED_BYTE, transparentPixels.data());
+                    
+                    LOG_INFO("Cleared layer '{}'", layer->name);
+                } else {
+                    LOG_ERROR("Failed to get texture page for layer '{}'", layer->name);
+                }
             }
-        }
-        ImGui::PopStyleColor();
+        } // StyleScope automatically pops here
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip("Clear this layer (fill with transparent pixels)");
@@ -255,9 +227,59 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         }
 
         ImGui::EndGroup();
+        
+        // Get the height of the layer group for the drag handle
+        float layerItemHeight = ImGui::GetItemRectSize().y;
+
+        // Add drag handle on the right side - spans full height
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.00f, 0.47f, 0.84f, 0.3f)); // Blue tint
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.47f, 0.84f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.00f, 0.47f, 0.84f, 0.7f));
+        ImGui::Button(("⋮##drag_" + std::to_string(i)).c_str(), ImVec2(20, layerItemHeight));
+        ImGui::PopStyleColor(3);
+        
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Drag to reorder");
+        }
+
+        // Drag-and-drop source: make this drag handle draggable
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            // Set payload to carry the layer index
+            ImGui::SetDragDropPayload("LAYER_REORDER", &i, sizeof(size_t));
+            ImGui::Text("Reordering: %s", layer->name.c_str());
+            ImGui::EndDragDropSource();
+        }
+
+        // Drag-and-drop target: accept drops on the entire layer row
+        ImGui::SameLine(0, 0); // No spacing
+        ImGui::SetCursorPosX(0); // Go back to start of line
+        ImGui::InvisibleButton(("##drop_target_" + std::to_string(i)).c_str(), ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetItemRectSize().y));
+        
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("LAYER_REORDER")) {
+                size_t draggedIdx = *(const size_t*)payload->Data;
+                if (draggedIdx != i) {
+                    // Swap the layers
+                    std::swap(app.getLayers()[draggedIdx], app.getLayers()[i]);
+                    LOG_INFO("Moved layer from {} to {}", draggedIdx, i);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
 
         ImGui::PopID();
         ImGui::Separator();
+    }
+
+    // Handle layer deletion after the UI loop completes
+    if (ImGui::GetIO().UserData != nullptr) {
+        size_t indexToDelete = reinterpret_cast<size_t>(ImGui::GetIO().UserData);
+        if (indexToDelete < app.getLayerCount()) {
+            LOG_INFO("Deleting layer at index {}", indexToDelete);
+            app.getLayers().erase(app.getLayers().begin() + indexToDelete);
+        }
+        ImGui::GetIO().UserData = nullptr; // Clear the flag
     }
 
     ImGui::End();

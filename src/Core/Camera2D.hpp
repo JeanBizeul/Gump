@@ -14,6 +14,7 @@ class Camera2D {
     // Zoom
     void zoom(float factor);
     void setZoom(float zoom);
+    void resetZoom() { _zoom = 1.0f; }
 
     // Getters
     glm::vec2 getPosition() const;

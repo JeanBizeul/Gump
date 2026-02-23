@@ -10,6 +10,8 @@
 #include "Vertex.hpp"
 
 #include "UI/UI.hpp"
+#include "UI/UIStyle.hpp"
+#include "Actions.hpp"
 
 #include "Tools/ToolsFunctions.hpp"
 #include "Effects/InvertEffect.hpp"
@@ -28,6 +30,20 @@ Gump::Application::Application()
     try {
         LOG_DEBUG("Creating window ...");
         _window = std::make_unique<OpenGLUtils::Window>(WindowWidth, WindowHeight, std::string(WindowName));
+        
+        // Apply professional theme to ImGui
+        LOG_DEBUG("Applying UI theme ...");
+        UI::applyProfessionalTheme();
+        
+        // Register all application actions
+        LOG_DEBUG("Registering actions ...");
+        Actions::registerAllActions();
+        
+        // Load preferences
+        LOG_DEBUG("Loading preferences ...");
+        _preferencesManager.loadFromFile();
+        _preferencesManager.loadShortcuts(_shortcutManager);
+        
         LOG_DEBUG("Creating camera ...");
         _camera = std::make_unique<Camera2D>();
         LOG_DEBUG("Loading assets ...");
@@ -132,8 +148,43 @@ void Gump::Application::stop()
     _running = false;
 }
 
+void Gump::Application::closePreferences()
+{
+    // Save preferences when closing the preferences window
+    LOG_INFO("Closing preferences, saving settings...");
+    _preferencesManager.saveShortcuts(_shortcutManager);
+    _preferencesManager.saveToFile();
+    _preferencesOpen = false;
+}
+
 void Gump::Application::update()
 {
+    // Handle global shortcuts
+    for (const auto& shortcut : _shortcutManager.getShortcuts()) {
+        if (shortcut.key == -1) continue; // Skip unbound shortcuts
+        
+        // Check if this shortcut's key combination is pressed
+        KeyModifier currentMods = KeyModifier::None;
+        if (Input::isKeyHeld(GLFW_KEY_LEFT_CONTROL) || Input::isKeyHeld(GLFW_KEY_RIGHT_CONTROL)) {
+            currentMods = currentMods | KeyModifier::Ctrl;
+        }
+        if (Input::isKeyHeld(GLFW_KEY_LEFT_SHIFT) || Input::isKeyHeld(GLFW_KEY_RIGHT_SHIFT)) {
+            currentMods = currentMods | KeyModifier::Shift;
+        }
+        if (Input::isKeyHeld(GLFW_KEY_LEFT_ALT) || Input::isKeyHeld(GLFW_KEY_RIGHT_ALT)) {
+            currentMods = currentMods | KeyModifier::Alt;
+        }
+        if (Input::isKeyHeld(GLFW_KEY_LEFT_SUPER) || Input::isKeyHeld(GLFW_KEY_RIGHT_SUPER)) {
+            currentMods = currentMods | KeyModifier::Super;
+        }
+        
+        if (Input::isKeyPressed(shortcut.key) && shortcut.matches(shortcut.key, currentMods)) {
+            // Execute the action
+            ActionRegistry::instance().executeAction(shortcut.actionId, *this);
+            break; // Only execute one shortcut per frame
+        }
+    }
+    
     if ((Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE) ||
         Input::isMouseButtonHeld(GLFW_MOUSE_BUTTON_MIDDLE))) {
         _camera->move(Input::getMouseDelta());
@@ -176,11 +227,12 @@ void Gump::Application::render()
     _shader->set("uProjectionView", pv);
     _shader->set("uCanvasSize", glm::vec2(_canvasSize.x, _canvasSize.y));
 
-    for (size_t i = 0; i < _layers.size(); i++) {
+    // Draw layers in reverse order so the last layer (active) is on top
+    for (int i = _layers.size() - 1; i >= 0; i--) {
         const auto& layer = _layers[i];
         
         // If this is the last layer and we have an active effect preview, use the preview texture
-        if (i == _layers.size() - 1 && _effectPreviewActive && _effectPreviewTexture != 0) {
+        if (i == static_cast<int>(_layers.size()) - 1 && _effectPreviewActive && _effectPreviewTexture != 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, _effectPreviewTexture);
             _shader->set("uTexture", 0);

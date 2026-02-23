@@ -88,19 +88,34 @@ std::expected<void, std::string> Actions::TopMenu::redoAction(Application &app)
 
 std::expected<void, std::string> Actions::TopMenu::cutAction(Application &app)
 {
-    LOG_DEBUG("Action: Cut");
+    if (!app.getSelectionState().hasSelection) {
+        LOG_WARNING("No selection to cut");
+        return std::unexpected(std::string("No selection to cut"));
+    }
+    LOG_INFO("Action: Cut");
+    app.cutSelection();
     return {};
 }
 
 std::expected<void, std::string> Actions::TopMenu::copyAction(Application &app)
 {
-    LOG_DEBUG("Action: Copy");
+    if (!app.getSelectionState().hasSelection) {
+        LOG_WARNING("No selection to copy");
+        return std::unexpected(std::string("No selection to copy"));
+    }
+    LOG_INFO("Action: Copy");
+    app.copySelection();
     return {};
 }
 
 std::expected<void, std::string> Actions::TopMenu::pasteAction(Application &app)
 {
-    LOG_DEBUG("Action: Paste");
+    if (!app.getClipboard().hasData) {
+        LOG_WARNING("Clipboard is empty");
+        return std::unexpected(std::string("Clipboard is empty"));
+    }
+    LOG_INFO("Action: Paste");
+    app.pasteClipboard();
     return {};
 }
 
