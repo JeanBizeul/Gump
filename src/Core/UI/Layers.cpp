@@ -92,33 +92,6 @@ void Gump::UI::renderLayers(Gump::Application &app) {
             }
         }
 
-        // Move up button
-        if (!app.canLayerMoveUp(i)) {
-            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        }
-        if (ImGui::Button(("Up##" + std::to_string(i)).c_str())) {
-            app.moveLayerUp(i);
-        }
-        if (!app.canLayerMoveUp(i)) {
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
-        }
-
-        // Move down button
-        ImGui::SameLine();
-        if (!app.canLayerMoveDown(i)) {
-            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-        }
-        if (ImGui::Button(("Down##" + std::to_string(i)).c_str())) {
-            app.moveLayerDown(i);
-        }
-        if (!app.canLayerMoveDown(i)) {
-            ImGui::PopItemFlag();
-            ImGui::PopStyleVar();
-        }
-
         ImGui::SameLine();
         
         // Disable delete button if this is the only layer

@@ -172,6 +172,12 @@ public:
     bool isPreferencesOpen() const { return _preferencesOpen; }
     bool* getPreferencesOpenPtr() { return &_preferencesOpen; }
     
+    // Tutorials
+    void openTutorials() { _tutorialsOpen = true; }
+    void closeTutorials() { _tutorialsOpen = false; }
+    bool isTutorialsOpen() const { return _tutorialsOpen; }
+    bool* getTutorialsOpenPtr() { return &_tutorialsOpen; }
+    
     // Shortcut management
     ShortcutManager& getShortcutManager() { return _shortcutManager; }
     
@@ -232,6 +238,7 @@ private:
     bool _effectPreviewActive = false;
 
     bool _preferencesOpen = false;
+    bool _tutorialsOpen = false;
     ShortcutManager _shortcutManager;
     PreferencesManager _preferencesManager;
 

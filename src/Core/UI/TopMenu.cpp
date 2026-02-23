@@ -109,6 +109,12 @@ void Gump::UI::renderTopMenu(Application &app)
         }
 
         if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("Tutorials", "F1")) {
+                app.openTutorials();
+            }
+            
+            ImGui::Separator();
+            
             if (ImGui::MenuItem("About")) {
 
             }

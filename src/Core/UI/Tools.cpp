@@ -19,222 +19,209 @@ static void renderFuzzySelectTool(Gump::Application &app);
 static void renderPencilTool(Gump::Application &app);
 static void renderEraserTool(Gump::Application &app);
 
-void Gump::UI::renderTools(Gump::Application &app) {
+void Gump::UI::renderTools(Gump::Application &app)
+{
     ImGui::Begin("Tools");
 
-    std::string selectedTool = app.getSelectedTool();
-
-    // Move tool
-    {
-        bool isSelected = (selectedTool == "move");
-        if (isSelected) {
-            // Add thick blue border for selected tool
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f)); // Blue border
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f); // Thick border
-        }
-        
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
-
-        ImGui::BeginChild("move_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        renderMoveTool(app);
-        ImGui::EndChild();
-        
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
-        
-        if (ImGui::IsItemClicked()) {
-            app.setSelectedTool("move");
-        }
+    auto& shortcutMgr = app.getShortcutManager();
+    auto& prefMgr = app.getPreferencesManager();
+    
+    // Get accent color for outline
+    float r, g, b, a;
+    ImVec4 accentColor = ImVec4(0.0f, 0.47f, 0.84f, 1.0f); // Default blue
+    if (prefMgr.getStyleColor("Accent", r, g, b, a)) {
+        accentColor = ImVec4(r, g, b, a);
     }
     
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Move Tool (V)");
-    }
-
-    // Pencil tool
-    {
-        bool isSelected = (selectedTool == "pencil");
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
+    // Helper lambda to get shortcut string for an action
+    auto getShortcutText = [&](const std::string& actionId) -> std::string {
+        for (const auto& shortcut : shortcutMgr.getShortcuts()) {
+            if (shortcut.actionId == actionId && shortcut.key != -1) {
+                return shortcut.toString();
+            }
         }
-        
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
+        return "";
+    };
+    
+    // Helper lambda to draw outline around selected tool
+    auto drawSelectedOutline = [&]() {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        ImVec2 min = ImGui::GetItemRectMin();
+        ImVec2 max = ImGui::GetItemRectMax();
+        ImU32 outlineCol = ImGui::ColorConvertFloat4ToU32(accentColor);
+        draw_list->AddRect(min, max, outlineCol, 0.0f, 0, 2.5f); // 2.5px thick outline
+    };
 
-        ImGui::BeginChild("pencil_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        renderPencilTool(app);
-        ImGui::EndChild();
+    ImGui::Text("Drawing Tools");
+    ImGui::Separator();
+
+    // Start a table for icon grid layout
+    if (ImGui::BeginTable("ToolsGrid", Columns, ImGuiTableFlags_None)) {
         
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
+        // Pencil
+        ImGui::TableNextColumn();
+        bool isPencilSelected = app.getSelectedTool() == "pencil";
+        ImVec4 pencilBg = isPencilSelected ? SelectedBackgroundColor : BackgroundColor;
+        ImGui::PushStyleColor(ImGuiCol_Button, pencilBg);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SelectedBackgroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, SelectedBackgroundColor);
         
-        if (ImGui::IsItemClicked()) {
+        if (ImGui::Button("##Pencil", IconSize)) {
             app.setSelectedTool("pencil");
         }
-    }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Pencil Tool (B)");
-    }
-
-    // Eraser tool
-    {
-        bool isSelected = (selectedTool == "eraser");
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
+        if (isPencilSelected) {
+            drawSelectedOutline();
+        }
+        if (ImGui::IsItemHovered()) {
+            std::string shortcut = getShortcutText("tool.pencil");
+            if (!shortcut.empty()) {
+                ImGui::SetTooltip("Pencil Tool (%s)", shortcut.c_str());
+            } else {
+                ImGui::SetTooltip("Pencil Tool");
+            }
         }
         
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
+        ImVec2 pencilPos = ImGui::GetItemRectMin();
+        ImGui::SetCursorScreenPos(pencilPos);
+        renderPencilTool(app);
+        
+        ImGui::PopStyleColor(3);
 
-        ImGui::BeginChild("eraser_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        renderEraserTool(app);
-        ImGui::EndChild();
+        // Eraser
+        ImGui::TableNextColumn();
+        bool isEraserSelected = app.getSelectedTool() == "eraser";
+        ImVec4 eraserBg = isEraserSelected ? SelectedBackgroundColor : BackgroundColor;
+        ImGui::PushStyleColor(ImGuiCol_Button, eraserBg);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SelectedBackgroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, SelectedBackgroundColor);
         
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
-        
-        if (ImGui::IsItemClicked()) {
+        if (ImGui::Button("##Eraser", IconSize)) {
             app.setSelectedTool("eraser");
         }
-    }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Eraser Tool (E)");
-    }
-
-    ImGui::SameLine();
-
-    // Fill tool
-    {
-        bool isSelected = (selectedTool == "fill");
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
+        if (isEraserSelected) {
+            drawSelectedOutline();
+        }
+        if (ImGui::IsItemHovered()) {
+            std::string shortcut = getShortcutText("tool.eraser");
+            if (!shortcut.empty()) {
+                ImGui::SetTooltip("Eraser Tool (%s)", shortcut.c_str());
+            } else {
+                ImGui::SetTooltip("Eraser Tool");
+            }
         }
         
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
+        ImVec2 eraserPos = ImGui::GetItemRectMin();
+        ImGui::SetCursorScreenPos(eraserPos);
+        renderEraserTool(app);
+        
+        ImGui::PopStyleColor(3);
 
-        ImGui::BeginChild("fill_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        ImGui::GetWindowDrawList()->AddRectFilled(
-            ImGui::GetCursorScreenPos(),
-            ImVec2(ImGui::GetCursorScreenPos().x + IconSize.x - 4, ImGui::GetCursorScreenPos().y + IconSize.y - 4),
-            IM_COL32(100, 100, 100, 255)
-        );
-        ImGui::EndChild();
-        
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
-        
-        if (ImGui::IsItemClicked()) {
-            app.setSelectedTool("fill");
-        }
-    }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Fill Tool (G)");
+        ImGui::EndTable();
     }
 
-    // Selection tool
-    {
-        bool isSelected = (selectedTool == "selection");
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
-        }
-        
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
+    ImGui::Spacing();
+    ImGui::Text("Selection Tools");
+    ImGui::Separator();
 
-        ImGui::BeginChild("selection_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        renderSelectionTool(app);
-        ImGui::EndChild();
+    if (ImGui::BeginTable("SelectionToolsGrid", Columns, ImGuiTableFlags_None)) {
         
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
+        // Selection
+        ImGui::TableNextColumn();
+        bool isSelectionSelected = app.getSelectedTool() == "selection";
+        ImVec4 selectionBg = isSelectionSelected ? SelectedBackgroundColor : BackgroundColor;
+        ImGui::PushStyleColor(ImGuiCol_Button, selectionBg);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SelectedBackgroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, SelectedBackgroundColor);
         
-        if (ImGui::IsItemClicked()) {
+        if (ImGui::Button("##Selection", IconSize)) {
             app.setSelectedTool("selection");
         }
-    }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Selection Tool (M)");
-    }
-
-    ImGui::SameLine();
-
-    // Fuzzy Select tool
-    {
-        bool isSelected = (selectedTool == "fuzzy_select");
-        if (isSelected) {
-            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.47f, 0.84f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
+        if (isSelectionSelected) {
+            drawSelectedOutline();
+        }
+        if (ImGui::IsItemHovered()) {
+            std::string shortcut = getShortcutText("tool.selection");
+            if (!shortcut.empty()) {
+                ImGui::SetTooltip("Selection Tool (%s)", shortcut.c_str());
+            } else {
+                ImGui::SetTooltip("Selection Tool");
+            }
         }
         
-        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(
-            buttonPos,
-            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
-            IM_COL32(0, 0, 0, 255)
-        );
+        ImVec2 selectionPos = ImGui::GetItemRectMin();
+        ImGui::SetCursorScreenPos(selectionPos);
+        renderSelectionTool(app);
+        
+        ImGui::PopStyleColor(3);
 
-        ImGui::BeginChild("fuzzy_select_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
-        renderFuzzySelectTool(app);
-        ImGui::EndChild();
+        // Fuzzy Select
+        ImGui::TableNextColumn();
+        bool isFuzzySelectSelected = app.getSelectedTool() == "fuzzy_select";
+        ImVec4 fuzzyBg = isFuzzySelectSelected ? SelectedBackgroundColor : BackgroundColor;
+        ImGui::PushStyleColor(ImGuiCol_Button, fuzzyBg);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SelectedBackgroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, SelectedBackgroundColor);
         
-        if (isSelected) {
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-        }
-        
-        if (ImGui::IsItemClicked()) {
+        if (ImGui::Button("##FuzzySelect", IconSize)) {
             app.setSelectedTool("fuzzy_select");
         }
+        if (isFuzzySelectSelected) {
+            drawSelectedOutline();
+        }
+        if (ImGui::IsItemHovered()) {
+            std::string shortcut = getShortcutText("tool.fuzzy_select");
+            if (!shortcut.empty()) {
+                ImGui::SetTooltip("Fuzzy Select Tool (%s)", shortcut.c_str());
+            } else {
+                ImGui::SetTooltip("Fuzzy Select Tool");
+            }
+        }
+        
+        ImVec2 fuzzyPos = ImGui::GetItemRectMin();
+        ImGui::SetCursorScreenPos(fuzzyPos);
+        renderFuzzySelectTool(app);
+        
+        ImGui::PopStyleColor(3);
+
+        ImGui::EndTable();
     }
-    
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Fuzzy Select Tool (Magic Wand)");
+
+    ImGui::Spacing();
+    ImGui::Text("Navigation");
+    ImGui::Separator();
+
+    if (ImGui::BeginTable("NavigationGrid", Columns, ImGuiTableFlags_None)) {
+        
+        // Move
+        ImGui::TableNextColumn();
+        bool isMoveSelected = app.getSelectedTool() == "move";
+        ImVec4 moveBg = isMoveSelected ? SelectedBackgroundColor : BackgroundColor;
+        ImGui::PushStyleColor(ImGuiCol_Button, moveBg);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, SelectedBackgroundColor);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, SelectedBackgroundColor);
+        
+        if (ImGui::Button("##Move", IconSize)) {
+            app.setSelectedTool("move");
+        }
+        if (isMoveSelected) {
+            drawSelectedOutline();
+        }
+        if (ImGui::IsItemHovered()) {
+            std::string shortcut = getShortcutText("tool.move");
+            if (!shortcut.empty()) {
+                ImGui::SetTooltip("Move Tool (%s)", shortcut.c_str());
+            } else {
+                ImGui::SetTooltip("Move Tool");
+            }
+        }
+        
+        ImVec2 movePos = ImGui::GetItemRectMin();
+        ImGui::SetCursorScreenPos(movePos);
+        renderMoveTool(app);
+        
+        ImGui::PopStyleColor(3);
+
+        ImGui::EndTable();
     }
 
     ImGui::End();

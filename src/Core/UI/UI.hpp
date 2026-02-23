@@ -18,6 +18,7 @@ namespace UI {
     void renderManualResizeDialog(Gump::Application &app);
     void renderDebugInfo(Gump::Application &app);
     void renderPreferences(Gump::Application &app);
+    void renderTutorials(Gump::Application &app);
 }
 }
 

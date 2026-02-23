@@ -266,7 +266,16 @@ void Gump::Application::update()
             currentMods = currentMods | KeyModifier::Super;
         }
         
+        // Use isKeyPressed to only trigger once per key press
         if (Input::isKeyPressed(shortcut.key) && shortcut.matches(shortcut.key, currentMods)) {
+            // Allow F1 (tutorials) and Ctrl+, (preferences) to work even when ImGui has focus
+            bool isWindowToggle = (shortcut.actionId == "app.tutorials" || shortcut.actionId == "app.preferences");
+            
+            // Don't process other shortcuts when ImGui has keyboard focus (e.g., typing in text fields)
+            if (!isWindowToggle && ImGui::GetIO().WantCaptureKeyboard) {
+                continue;
+            }
+            
             // Execute the action
             ActionRegistry::instance().executeAction(shortcut.actionId, *this);
             break; // Only execute one shortcut per frame

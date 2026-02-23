@@ -705,6 +705,11 @@ void openPreferences(Application& app) {
     app.openPreferences();
 }
 
+void openTutorials(Application& app) {
+    LOG_INFO("Action: Open Tutorials");
+    app.openTutorials();
+}
+
 // Register all actions
 void registerAllActions() {
     auto& registry = ActionRegistry::instance();
@@ -742,6 +747,7 @@ void registerAllActions() {
     
     // App
     registry.registerAction("app.preferences", openPreferences);
+    registry.registerAction("app.tutorials", openTutorials);
     
     LOG_INFO("Registered all application actions");
 }

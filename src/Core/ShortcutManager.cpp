@@ -115,6 +115,7 @@ void ShortcutManager::initializeDefaults() {
     
     // Preferences
     _shortcuts.emplace_back("Preferences", "app.preferences", GLFW_KEY_COMMA, KeyModifier::Ctrl);
+    _shortcuts.emplace_back("Tutorials", "app.tutorials", GLFW_KEY_F1, KeyModifier::None);
 }
 
 void ShortcutManager::updateShortcut(const std::string& actionId, int newKey, KeyModifier newMods) {
