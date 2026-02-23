@@ -9,6 +9,7 @@ namespace Actions {
 // File Actions
 void newFile(Application& app);
 void openFile(Application& app);
+void loadFile(Application& app);
 void saveFile(Application& app);
 void saveFileAs(Application& app);
 void exportFile(Application& app);

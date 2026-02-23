@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <vector>
 #include <cstring>
+#include <map>
 #include "Utils/Utils.hpp"
 
 // Use libzip for compression
@@ -16,6 +17,135 @@
 // Forward declare stb_image_write functions (implementation is in another TU)
 extern "C" {
     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+    unsigned char* stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp);
+    void stbi_image_free(void *retval_from_stbi_load);
+}
+
+// Helper function to parse config file
+static std::map<std::string, std::map<std::string, std::string>> parseConfigFile(const std::string& configPath) {
+    std::map<std::string, std::map<std::string, std::string>> config;
+    std::ifstream file(configPath);
+    
+    if (!file.is_open()) {
+        LOG_ERROR("Failed to open config file: {}", configPath);
+        return config;
+    }
+    
+    std::string currentSection;
+    std::string line;
+    
+    while (std::getline(file, line)) {
+        // Trim whitespace
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+        
+        // Skip empty lines
+        if (line.empty()) continue;
+        
+        // Check for section header
+        if (line.front() == '[' && line.back() == ']') {
+            currentSection = line.substr(1, line.length() - 2);
+            config[currentSection] = std::map<std::string, std::string>();
+            LOG_DEBUG("Found config section: '{}'", currentSection);
+        }
+        // Parse key=value pair
+        else if (!currentSection.empty()) {
+            size_t equalPos = line.find('=');
+            if (equalPos != std::string::npos) {
+                std::string key = line.substr(0, equalPos);
+                std::string value = line.substr(equalPos + 1);
+                config[currentSection][key] = value;
+                LOG_DEBUG("  {}={}", key, value);
+            }
+        }
+    }
+    
+    file.close();
+    LOG_INFO("Parsed {} sections from config file", config.size());
+    return config;
+}
+
+// Helper function to extract zip archive
+static bool extractZipArchive(const std::string& zipPath, const std::string& extractPath) {
+    namespace fs = std::filesystem;
+    
+    // Open the zip archive
+    int error;
+    zip_t* archive = zip_open(zipPath.c_str(), ZIP_RDONLY, &error);
+    if (!archive) {
+        zip_error_t zip_error;
+        zip_error_init_with_code(&zip_error, error);
+        LOG_ERROR("Failed to open zip archive: {}", zip_error_strerror(&zip_error));
+        zip_error_fini(&zip_error);
+        return false;
+    }
+    
+    // Create extraction directory
+    try {
+        if (fs::exists(extractPath)) {
+            fs::remove_all(extractPath);
+        }
+        fs::create_directories(extractPath);
+    } catch (const fs::filesystem_error& e) {
+        LOG_ERROR("Failed to create extraction directory: {}", e.what());
+        zip_close(archive);
+        return false;
+    }
+    
+    // Get number of files in archive
+    zip_int64_t numFiles = zip_get_num_entries(archive, 0);
+    
+    // Extract each file
+    for (zip_int64_t i = 0; i < numFiles; i++) {
+        // Get file name
+        const char* filename = zip_get_name(archive, i, 0);
+        if (!filename) {
+            LOG_ERROR("Failed to get filename for entry {}", i);
+            continue;
+        }
+        
+        // Open file in archive
+        zip_file_t* file = zip_fopen_index(archive, i, 0);
+        if (!file) {
+            LOG_ERROR("Failed to open file in archive: {}", filename);
+            continue;
+        }
+        
+        // Get file size
+        zip_stat_t stat;
+        if (zip_stat_index(archive, i, 0, &stat) != 0) {
+            LOG_ERROR("Failed to get file stats: {}", filename);
+            zip_fclose(file);
+            continue;
+        }
+        
+        // Read file contents
+        std::vector<char> buffer(stat.size);
+        zip_int64_t bytesRead = zip_fread(file, buffer.data(), stat.size);
+        zip_fclose(file);
+        
+        if (bytesRead != static_cast<zip_int64_t>(stat.size)) {
+            LOG_ERROR("Failed to read complete file: {}", filename);
+            continue;
+        }
+        
+        // Write to disk
+        fs::path outputPath = fs::path(extractPath) / filename;
+        std::ofstream outFile(outputPath, std::ios::binary);
+        if (!outFile.is_open()) {
+            LOG_ERROR("Failed to create output file: {}", outputPath.string());
+            continue;
+        }
+        
+        outFile.write(buffer.data(), buffer.size());
+        outFile.close();
+        
+        LOG_DEBUG("Extracted: {}", filename);
+    }
+    
+    zip_close(archive);
+    LOG_INFO("Successfully extracted {} files from archive", numFiles);
+    return true;
 }
 
 // Helper function to add a file to a zip archive using libzip
@@ -31,14 +161,16 @@ static bool addFileToZip(zip_t* archive, const std::string& filepath, const std:
     size_t fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
     
-    std::vector<char> buffer(fileSize);
-    file.read(buffer.data(), fileSize);
+    // Allocate buffer that will be managed by libzip
+    char* buffer = new char[fileSize];
+    file.read(buffer, fileSize);
     file.close();
 
-    // Create zip source from buffer
-    zip_source_t* source = zip_source_buffer(archive, buffer.data(), fileSize, 0);
+    // Create zip source from buffer - libzip will take ownership and free the buffer
+    zip_source_t* source = zip_source_buffer(archive, buffer, fileSize, 1); // 1 = freep (libzip will free the buffer)
     if (source == nullptr) {
         LOG_ERROR("Failed to create zip source: {}", zip_strerror(archive));
+        delete[] buffer;
         return false;
     }
 
@@ -101,18 +233,8 @@ static bool exportLayerAsPNG(Gump::Application& app, Gump::Layer& layer, const s
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteFramebuffers(1, &fbo);
 
-    // Flip pixels vertically (OpenGL reads bottom-to-top)
-    std::vector<unsigned char> flippedPixels(layerWidth * layerHeight * 4);
-    for (int y = 0; y < layerHeight; y++) {
-        std::memcpy(
-            &flippedPixels[y * layerWidth * 4],
-            &pixels[(layerHeight - 1 - y) * layerWidth * 4],
-            layerWidth * 4
-        );
-    }
-
-    // Write PNG using stb_image_write
-    if (!stbi_write_png(filepath.c_str(), layerWidth, layerHeight, 4, flippedPixels.data(), layerWidth * 4)) {
+    // Write PNG directly without flipping - the texture atlas already stores layers correctly
+    if (!stbi_write_png(filepath.c_str(), layerWidth, layerHeight, 4, pixels.data(), layerWidth * 4)) {
         LOG_ERROR("Failed to write PNG file: {}", filepath);
         return false;
     }
@@ -158,7 +280,8 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
     configFile << "[Project]\n";
     configFile << "CanvasWidth=" << canvasSize.x << "\n";
     configFile << "CanvasHeight=" << canvasSize.y << "\n";
-    configFile << "LayerCount=" << layers.size() << "\n\n";
+    configFile << "LayerCount=" << layers.size() << "\n";
+    configFile << "\n";
 
     // Export each layer
     std::vector<fs::path> layerPaths;
@@ -176,7 +299,8 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
         
         // Generate filename for this layer
         std::string layerFilename = "layer_" + std::to_string(i) + ".png";
-        configFile << "File=" << layerFilename << "\n\n";
+        configFile << "File=" << layerFilename << "\n";
+        configFile << "\n";
         
         // Export layer as PNG
         fs::path layerPath = saveDir / layerFilename;
@@ -263,6 +387,164 @@ void newFile(Application& app) {
 void openFile(Application& app) {
     LOG_INFO("Action: Open File");
     TopMenu::openFile(app);
+}
+
+void loadFile(Application& app) {
+    LOG_INFO("Action: Load File");
+    
+    namespace fs = std::filesystem;
+    
+    // Prompt user for file to load
+    std::string filepath = Gump::Utils::openFilePickerDialog(
+        "Open Gump Project",
+        "Gump Project|*.gump|All Files|*.*"
+    );
+    
+    if (filepath.empty()) {
+        LOG_INFO("Load cancelled by user");
+        return;
+    }
+    
+    LOG_INFO("Loading project from: {}", filepath);
+    
+    // Step 0: Reset the project - clear all layers
+    LOG_INFO("Resetting project...");
+    app.getLayers().clear();
+    
+    // Clear selection state
+    app.getSelectionState().hasSelection = false;
+    app.getSelectionState().clearMask();
+    app.updateSelectionMesh();
+    
+    // Step 1: Create temporary extraction directory
+    fs::path path(filepath);
+    std::string dirName = path.stem().string();
+    fs::path tempDir = path.parent_path() / (dirName + "_load_temp");
+    
+    LOG_INFO("Extracting to temporary directory: {}", tempDir.string());
+    
+    // Step 2: Extract the zip archive
+    if (!extractZipArchive(filepath, tempDir.string())) {
+        LOG_ERROR("Failed to extract archive");
+        // Create a default layer on failure
+        app.addEmptyLayer("Layer 1", 800, 600);
+        return;
+    }
+    
+    // Step 3: Load the config file
+    fs::path configPath = tempDir / "project.cfg";
+    if (!fs::exists(configPath)) {
+        LOG_ERROR("Config file not found in archive");
+        fs::remove_all(tempDir);
+        app.addEmptyLayer("Layer 1", 800, 600);
+        return;
+    }
+    
+    auto config = parseConfigFile(configPath.string());
+    
+    // Parse project metadata
+    if (config.find("Project") == config.end()) {
+        LOG_ERROR("Project section not found in config");
+        fs::remove_all(tempDir);
+        app.addEmptyLayer("Layer 1", 800, 600);
+        return;
+    }
+    
+    auto& projectSection = config["Project"];
+    int canvasWidth = std::stoi(projectSection["CanvasWidth"]);
+    int canvasHeight = std::stoi(projectSection["CanvasHeight"]);
+    int layerCount = std::stoi(projectSection["LayerCount"]);
+    
+    LOG_INFO("Loading project: {}x{} canvas with {} layers", canvasWidth, canvasHeight, layerCount);
+    
+    // Set canvas size
+    app.setCanvasSize(glm::uvec2(canvasWidth, canvasHeight));
+    
+    // Step 4: Load each layer
+    for (int i = 0; i < layerCount; i++) {
+        std::string layerSection = "Layer" + std::to_string(i);
+        
+        if (config.find(layerSection) == config.end()) {
+            LOG_ERROR("Layer section {} not found in config", layerSection);
+            continue;
+        }
+        
+        auto& layer = config[layerSection];
+        
+        std::string layerName = layer["Name"];
+        int width = std::stoi(layer["Width"]);
+        int height = std::stoi(layer["Height"]);
+        float posX = std::stof(layer["PositionX"]);
+        float posY = std::stof(layer["PositionY"]);
+        float transparency = std::stof(layer["Transparency"]);
+        bool visible = (layer["Visible"] == "1");
+        std::string filename = layer["File"];
+        
+        LOG_INFO("Loading layer {}: {} ({}x{})", i, layerName, width, height);
+        
+        // Load the layer image file
+        fs::path layerPath = tempDir / filename;
+        if (!fs::exists(layerPath)) {
+            LOG_ERROR("Layer file not found: {}", layerPath.string());
+            continue;
+        }
+        
+        // Load image using stb_image
+        int imgWidth, imgHeight, imgChannels;
+        unsigned char* imgData = stbi_load(layerPath.string().c_str(), &imgWidth, &imgHeight, &imgChannels, 4);
+        
+        if (!imgData) {
+            LOG_ERROR("Failed to load layer image: {}", layerPath.string());
+            continue;
+        }
+        
+        // Convert to vector
+        std::vector<unsigned char> pixels(imgData, imgData + (imgWidth * imgHeight * 4));
+        stbi_image_free(imgData);
+        
+        // Add to texture atlas with original layer name
+        std::string atlasName = layerName + "_loaded_" + std::to_string(i);
+        if (app.getTextureAtlas().addImageFromPixels(atlasName, imgWidth, imgHeight, pixels)) {
+            auto uvRectOpt = app.getTextureAtlas().getUVRect(atlasName);
+            if (uvRectOpt) {
+                // Create the layer
+                app.addLayer(layerName, width, height, uvRectOpt->uvMin, uvRectOpt->uvMax, uvRectOpt->pageIndex);
+                
+                // Restore layer properties
+                auto& loadedLayer = app.getLayer(app.getLayerCount() - 1);
+                loadedLayer.position = glm::vec2(posX, posY);
+                loadedLayer.transparency = transparency;
+                loadedLayer.isVisible = visible;
+                loadedLayer.updateMesh(); // Update mesh with position
+                
+                LOG_INFO("Successfully loaded layer: {}", layerName);
+            } else {
+                LOG_ERROR("Failed to get UV coordinates for loaded layer");
+            }
+        } else {
+            LOG_ERROR("Failed to add loaded layer to texture atlas");
+        }
+    }
+    
+    // Step 5: Clean up temporary directory
+    LOG_INFO("Cleaning up temporary directory...");
+    try {
+        fs::remove_all(tempDir);
+        LOG_INFO("Temporary directory cleaned up");
+    } catch (const fs::filesystem_error& e) {
+        LOG_WARNING("Failed to remove temporary directory: {}", e.what());
+    }
+    
+    // If no layers were loaded, create a default one
+    if (app.getLayerCount() == 0) {
+        LOG_WARNING("No layers were loaded, creating default layer");
+        app.addEmptyLayer("Layer 1", canvasWidth, canvasHeight);
+    }
+    
+    // Update the current file path
+    app.setCurrentFilePath(filepath);
+    
+    LOG_INFO("Project loaded successfully!");
 }
 
 void saveFile(Application& app) {
@@ -430,6 +712,7 @@ void registerAllActions() {
     // File
     registry.registerAction("file.new", newFile);
     registry.registerAction("file.open", openFile);
+    registry.registerAction("file.load", loadFile);
     registry.registerAction("file.save", saveFile);
     registry.registerAction("file.save_as", saveFileAs);
     registry.registerAction("file.export", exportFile);

@@ -18,10 +18,7 @@ void Gump::UI::renderTopMenu(Application &app)
                 }
             }
             if (ImGui::MenuItem("Open...", "Ctrl+O")) {
-                auto result = Gump::Actions::TopMenu::openFile(app);
-                if (!result) {
-                    LOG_ERROR("Failed to open file: {}", result.error());
-                }
+                Gump::Actions::loadFile(app);
             }
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
                 Gump::Actions::saveFile(app);
