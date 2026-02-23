@@ -28,21 +28,31 @@ Gump::Application::Application()
     : _windowSize(WindowWidth, WindowHeight), _canvasSize(800, 600)
 {
     try {
+        // Load preferences BEFORE creating window so ImGui can use them
+        LOG_DEBUG("Loading preferences ...");
+        _preferencesManager.loadFromFile();
+        _preferencesManager.loadShortcuts(_shortcutManager);
+        
         LOG_DEBUG("Creating window ...");
         _window = std::make_unique<OpenGLUtils::Window>(WindowWidth, WindowHeight, std::string(WindowName));
         
-        // Apply professional theme to ImGui
+        // Apply theme after ImGui context is created by the window
         LOG_DEBUG("Applying UI theme ...");
-        UI::applyProfessionalTheme();
+        std::string themeName = _preferencesManager.getTheme();
+        if (themeName.empty() || themeName == "Professional (Light)") {
+            UI::applyProfessionalTheme();
+        } else {
+            // Apply professional theme as base, then override with saved settings
+            UI::applyProfessionalTheme();
+        }
+        
+        // Apply saved style settings to ImGui
+        LOG_DEBUG("Applying saved style settings...");
+        applyStyleSettingsFromPreferences();
         
         // Register all application actions
         LOG_DEBUG("Registering actions ...");
         Actions::registerAllActions();
-        
-        // Load preferences
-        LOG_DEBUG("Loading preferences ...");
-        _preferencesManager.loadFromFile();
-        _preferencesManager.loadShortcuts(_shortcutManager);
         
         LOG_DEBUG("Creating camera ...");
         _camera = std::make_unique<Camera2D>();
@@ -153,8 +163,72 @@ void Gump::Application::closePreferences()
     // Save preferences when closing the preferences window
     LOG_INFO("Closing preferences, saving settings...");
     _preferencesManager.saveShortcuts(_shortcutManager);
+    // Style settings are saved as they change, so they're already in the manager
     _preferencesManager.saveToFile();
     _preferencesOpen = false;
+}
+
+void Gump::Application::applyStyleSettingsFromPreferences()
+{
+    auto& style = ImGui::GetStyle();
+    
+    // Apply style colors if they exist
+    float r, g, b, a;
+    
+    if (_preferencesManager.getStyleColor("Background", r, g, b, a)) {
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_ChildBg] = ImVec4(r, g, b, a);
+        LOG_DEBUG("Applied background color: {}, {}, {}, {}", r, g, b, a);
+    }
+    
+    if (_preferencesManager.getStyleColor("Text", r, g, b, a)) {
+        style.Colors[ImGuiCol_Text] = ImVec4(r, g, b, a);
+        LOG_DEBUG("Applied text color: {}, {}, {}, {}", r, g, b, a);
+    }
+    
+    if (_preferencesManager.getStyleColor("Accent", r, g, b, a)) {
+        style.Colors[ImGuiCol_Header] = ImVec4(r, g, b, a * 0.8f);
+        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_HeaderActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_TabActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_SliderGrab] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(r, g, b, a);
+        LOG_DEBUG("Applied accent color: {}, {}, {}, {}", r, g, b, a);
+    }
+    
+    if (_preferencesManager.getStyleColor("Button", r, g, b, a)) {
+        style.Colors[ImGuiCol_Button] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(r * 0.9f, g * 0.9f, b * 0.9f, a);
+        style.Colors[ImGuiCol_FrameBg] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(r * 0.9f, g * 0.9f, b * 0.9f, a);
+        style.Colors[ImGuiCol_FrameBgActive] = ImVec4(r * 0.85f, g * 0.85f, b * 0.85f, a);
+        LOG_DEBUG("Applied button color: {}, {}, {}, {}", r, g, b, a);
+    }
+    
+    // Apply style values if they exist
+    float rounding = _preferencesManager.getStyleValue("WindowRounding", -1.0f);
+    if (rounding >= 0.0f) {
+        style.WindowRounding = rounding;
+        style.ChildRounding = rounding;
+        style.FrameRounding = rounding;
+        style.GrabRounding = rounding;
+        LOG_DEBUG("Applied window rounding: {}", rounding);
+    }
+    
+    float spacing = _preferencesManager.getStyleValue("ItemSpacing", -1.0f);
+    if (spacing >= 0.0f) {
+        style.ItemSpacing.x = spacing;
+        style.ItemSpacing.y = spacing;
+        LOG_DEBUG("Applied item spacing: {}", spacing);
+    }
+    
+    float padding = _preferencesManager.getStyleValue("WindowPadding", -1.0f);
+    if (padding >= 0.0f) {
+        style.WindowPadding.x = padding;
+        style.WindowPadding.y = padding;
+        LOG_DEBUG("Applied window padding: {}", padding);
+    }
 }
 
 void Gump::Application::update()

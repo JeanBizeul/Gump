@@ -177,6 +177,9 @@ public:
     
     // Preferences management
     PreferencesManager& getPreferencesManager() { return _preferencesManager; }
+    
+    // Apply style settings from preferences to ImGui
+    void applyStyleSettingsFromPreferences();
 
 private:
     bool _running = true;

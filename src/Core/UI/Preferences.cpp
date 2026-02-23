@@ -310,14 +310,97 @@ void Gump::UI::renderPreferences(Gump::Application &app) {
                 ImGui::Text("Customize the look and feel of the application");
                 ImGui::Spacing();
                 
-                // Theme selection
-                ImGui::Text("Theme:");
+                // Theme/Preset selection
+                ImGui::Text("Style Preset:");
                 ImGui::SameLine();
-                static int currentTheme = 0;
-                const char* themes[] = { "Professional (Light)", "Dark", "Classic", "High Contrast", "Custom" };
-                if (ImGui::Combo("##Theme", &currentTheme, themes, IM_ARRAYSIZE(themes))) {
-                    LOG_INFO("Theme changed to: {}", themes[currentTheme]);
-                    // TODO: Apply theme
+                
+                static std::string currentPresetName = "";
+                static int currentPresetIndex = 0;
+                
+                // Get all preset names
+                std::vector<std::string> presetNames = app.getPreferencesManager().getStylePresetNames();
+                
+                // Add built-in presets if not already saved
+                std::vector<std::string> allPresets = { "Professional (Light)", "Dark", "Classic", "High Contrast" };
+                for (const auto& name : presetNames) {
+                    if (std::find(allPresets.begin(), allPresets.end(), name) == allPresets.end()) {
+                        allPresets.push_back(name);
+                    }
+                }
+                
+                // Initialize current preset name from preferences
+                if (currentPresetName.empty()) {
+                    currentPresetName = app.getPreferencesManager().getTheme();
+                    auto it = std::find(allPresets.begin(), allPresets.end(), currentPresetName);
+                    if (it != allPresets.end()) {
+                        currentPresetIndex = std::distance(allPresets.begin(), it);
+                    }
+                }
+                
+                // Convert to const char* array for ImGui
+                std::vector<const char*> presetCStrings;
+                for (const auto& name : allPresets) {
+                    presetCStrings.push_back(name.c_str());
+                }
+                
+                if (ImGui::Combo("##StylePreset", &currentPresetIndex, presetCStrings.data(), presetCStrings.size())) {
+                    currentPresetName = allPresets[currentPresetIndex];
+                    LOG_INFO("Style preset changed to: {}", currentPresetName);
+                    
+                    // Load the preset if it exists
+                    if (app.getPreferencesManager().hasStylePreset(currentPresetName)) {
+                        app.getPreferencesManager().loadStylePreset(currentPresetName);
+                        app.applyStyleSettingsFromPreferences();
+                        
+                        // Reinitialize the color/value editing UI
+                        static bool forceReinit = true;
+                        forceReinit = true;
+                    } else {
+                        // Set the theme name for built-in themes
+                        app.getPreferencesManager().setTheme(currentPresetName);
+                    }
+                }
+                
+                ImGui::SameLine();
+                
+                // Save current settings as new preset
+                static char newPresetName[128] = "";
+                ImGui::SetNextItemWidth(150);
+                ImGui::InputTextWithHint("##NewPresetName", "New preset name...", newPresetName, sizeof(newPresetName));
+                ImGui::SameLine();
+                if (ImGui::Button("Save As")) {
+                    if (strlen(newPresetName) > 0) {
+                        app.getPreferencesManager().saveCurrentStyleAsPreset(newPresetName);
+                        LOG_INFO("Saved current style as preset: {}", newPresetName);
+                        newPresetName[0] = '\0'; // Clear input
+                    }
+                }
+                
+                ImGui::SameLine();
+                
+                // Delete current preset (only if it's a custom one)
+                bool isCustomPreset = currentPresetName != "Professional (Light)" && 
+                                     currentPresetName != "Dark" && 
+                                     currentPresetName != "Classic" && 
+                                     currentPresetName != "High Contrast";
+                
+                if (!isCustomPreset) {
+                    ImGui::BeginDisabled();
+                }
+                
+                if (ImGui::Button("Delete")) {
+                    if (isCustomPreset) {
+                        app.getPreferencesManager().deleteStylePreset(currentPresetName);
+                        LOG_INFO("Deleted style preset: {}", currentPresetName);
+                        // Reset to first preset
+                        currentPresetIndex = 0;
+                        currentPresetName = allPresets[0];
+                        app.getPreferencesManager().setTheme(currentPresetName);
+                    }
+                }
+                
+                if (!isCustomPreset) {
+                    ImGui::EndDisabled();
                 }
                 
                 ImGui::Spacing();
@@ -328,15 +411,46 @@ void Gump::UI::renderPreferences(Gump::Application &app) {
                 ImGui::Text("Colors:");
                 ImGui::Spacing();
                 
+                // Initialize static colors from saved preferences on first use
+                static bool colorsInitialized = false;
                 static ImVec4 bgColor = ImVec4(0.94f, 0.94f, 0.94f, 1.0f);
                 static ImVec4 textColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
                 static ImVec4 accentColor = ImVec4(0.0f, 0.47f, 0.84f, 1.0f);
                 static ImVec4 buttonColor = ImVec4(0.88f, 0.88f, 0.88f, 1.0f);
                 
-                ImGui::ColorEdit3("Background Color", (float*)&bgColor);
-                ImGui::ColorEdit3("Text Color", (float*)&textColor);
-                ImGui::ColorEdit3("Accent Color", (float*)&accentColor);
-                ImGui::ColorEdit3("Button Color", (float*)&buttonColor);
+                if (!colorsInitialized) {
+                    float r, g, b, a;
+                    if (app.getPreferencesManager().getStyleColor("Background", r, g, b, a)) {
+                        bgColor = ImVec4(r, g, b, a);
+                    }
+                    if (app.getPreferencesManager().getStyleColor("Text", r, g, b, a)) {
+                        textColor = ImVec4(r, g, b, a);
+                    }
+                    if (app.getPreferencesManager().getStyleColor("Accent", r, g, b, a)) {
+                        accentColor = ImVec4(r, g, b, a);
+                    }
+                    if (app.getPreferencesManager().getStyleColor("Button", r, g, b, a)) {
+                        buttonColor = ImVec4(r, g, b, a);
+                    }
+                    colorsInitialized = true;
+                }
+                
+                if (ImGui::ColorEdit3("Background Color", (float*)&bgColor)) {
+                    app.getPreferencesManager().setStyleColor("Background", bgColor.x, bgColor.y, bgColor.z, bgColor.w);
+                    app.applyStyleSettingsFromPreferences();
+                }
+                if (ImGui::ColorEdit3("Text Color", (float*)&textColor)) {
+                    app.getPreferencesManager().setStyleColor("Text", textColor.x, textColor.y, textColor.z, textColor.w);
+                    app.applyStyleSettingsFromPreferences();
+                }
+                if (ImGui::ColorEdit3("Accent Color", (float*)&accentColor)) {
+                    app.getPreferencesManager().setStyleColor("Accent", accentColor.x, accentColor.y, accentColor.z, accentColor.w);
+                    app.applyStyleSettingsFromPreferences();
+                }
+                if (ImGui::ColorEdit3("Button Color", (float*)&buttonColor)) {
+                    app.getPreferencesManager().setStyleColor("Button", buttonColor.x, buttonColor.y, buttonColor.z, buttonColor.w);
+                    app.applyStyleSettingsFromPreferences();
+                }
                 
                 ImGui::Spacing();
                 ImGui::Separator();
@@ -346,41 +460,60 @@ void Gump::UI::renderPreferences(Gump::Application &app) {
                 ImGui::Text("Style Parameters:");
                 ImGui::Spacing();
                 
+                // Initialize static values from saved preferences on first use
+                static bool valuesInitialized = false;
                 static float rounding = 0.0f;
                 static float spacing = 8.0f;
                 static float padding = 8.0f;
                 
-                ImGui::SliderFloat("Window Rounding", &rounding, 0.0f, 12.0f);
-                ImGui::SliderFloat("Item Spacing", &spacing, 2.0f, 20.0f);
-                ImGui::SliderFloat("Window Padding", &padding, 2.0f, 20.0f);
+                if (!valuesInitialized) {
+                    rounding = app.getPreferencesManager().getStyleValue("WindowRounding", 0.0f);
+                    spacing = app.getPreferencesManager().getStyleValue("ItemSpacing", 8.0f);
+                    padding = app.getPreferencesManager().getStyleValue("WindowPadding", 8.0f);
+                    valuesInitialized = true;
+                }
+                
+                if (ImGui::SliderFloat("Window Rounding", &rounding, 0.0f, 12.0f)) {
+                    app.getPreferencesManager().setStyleValue("WindowRounding", rounding);
+                    app.applyStyleSettingsFromPreferences();
+                }
+                if (ImGui::SliderFloat("Item Spacing", &spacing, 2.0f, 20.0f)) {
+                    app.getPreferencesManager().setStyleValue("ItemSpacing", spacing);
+                    app.applyStyleSettingsFromPreferences();
+                }
+                if (ImGui::SliderFloat("Window Padding", &padding, 2.0f, 20.0f)) {
+                    app.getPreferencesManager().setStyleValue("WindowPadding", padding);
+                    app.applyStyleSettingsFromPreferences();
+                }
                 
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
                 
-                // Import/Export buttons
-                ImGui::Text("Theme Management:");
-                ImGui::Spacing();
-                
-                if (ImGui::Button("Export Theme...")) {
-                    LOG_INFO("Export theme");
-                    // TODO: Open file dialog to save theme
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Import Theme...")) {
-                    LOG_INFO("Import theme");
-                    // TODO: Open file dialog to load theme
-                }
-                ImGui::SameLine();
+                // Reset button
                 if (ImGui::Button("Reset to Default")) {
                     LOG_INFO("Reset theme to default");
-                    // TODO: Reset theme
-                }
-                
-                ImGui::SameLine();
-                if (ImGui::Button("Save Now")) {
-                    app.getPreferencesManager().saveToFile();
-                    LOG_INFO("Preferences saved");
+                    // Reset to defaults
+                    bgColor = ImVec4(0.94f, 0.94f, 0.94f, 1.0f);
+                    textColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                    accentColor = ImVec4(0.0f, 0.47f, 0.84f, 1.0f);
+                    buttonColor = ImVec4(0.88f, 0.88f, 0.88f, 1.0f);
+                    rounding = 0.0f;
+                    spacing = 8.0f;
+                    padding = 8.0f;
+                    currentPresetIndex = 0;
+                    currentPresetName = "Professional (Light)";
+                    
+                    // Save and apply
+                    app.getPreferencesManager().setStyleColor("Background", bgColor.x, bgColor.y, bgColor.z, bgColor.w);
+                    app.getPreferencesManager().setStyleColor("Text", textColor.x, textColor.y, textColor.z, textColor.w);
+                    app.getPreferencesManager().setStyleColor("Accent", accentColor.x, accentColor.y, accentColor.z, accentColor.w);
+                    app.getPreferencesManager().setStyleColor("Button", buttonColor.x, buttonColor.y, buttonColor.z, buttonColor.w);
+                    app.getPreferencesManager().setStyleValue("WindowRounding", rounding);
+                    app.getPreferencesManager().setStyleValue("ItemSpacing", spacing);
+                    app.getPreferencesManager().setStyleValue("WindowPadding", padding);
+                    app.getPreferencesManager().setTheme("Professional (Light)");
+                    app.applyStyleSettingsFromPreferences();
                 }
                 
                 break;

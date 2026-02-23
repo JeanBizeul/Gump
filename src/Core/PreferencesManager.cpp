@@ -17,118 +17,158 @@ PreferencesManager::PreferencesManager() {
     _moduleVisibility["TopMenu"] = true;
 }
 
-bool PreferencesManager::saveToFile(const std::string& filepath) {
-    LOG_INFO("Saving preferences to: {}", filepath);
-    
+bool PreferencesManager::saveToFile(const std::string& filepath) const
+{
     std::ofstream file(filepath);
     if (!file.is_open()) {
         LOG_ERROR("Failed to open preferences file for writing: {}", filepath);
         return false;
     }
-    
-    file << "# Gump Preferences Configuration File\n";
-    file << "# Auto-generated - Do not edit manually unless you know what you're doing\n\n";
-    
-    // Save theme
-    if (!_theme.empty()) {
-        file << "[Theme]\n";
-        file << "current=" << _theme << "\n\n";
-    }
-    
+
+    // Save current theme
+    file << "[Theme]\n";
+    file << "current=" << _currentTheme << "\n\n";
+
     // Save shortcuts
-    if (!_shortcuts.empty()) {
-        file << "[Shortcuts]\n";
-        for (const auto& [actionId, keyCombo] : _shortcuts) {
-            file << actionId << "=" << keyCombo << "\n";
-        }
-        file << "\n";
-    }
-    
-    // Save module visibility
-    file << "[Modules]\n";
-    for (const auto& [moduleName, visible] : _moduleVisibility) {
-        file << moduleName << "=" << (visible ? "true" : "false") << "\n";
+    file << "[Shortcuts]\n";
+    for (const auto& [actionId, keyCombo] : _shortcuts) {
+        file << actionId << "=" << keyCombo << "\n";
     }
     file << "\n";
-    
-    // Save style values
-    if (!_styleValues.empty()) {
-        file << "[StyleValues]\n";
-        for (const auto& [key, value] : _styleValues) {
-            file << key << "=" << value << "\n";
+
+    // Save current style colors
+    file << "[StyleColors]\n";
+    for (const auto& [name, color] : _styleColors) {
+        file << name << "=" << color.r << "," << color.g << "," << color.b << "," << color.a << "\n";
+    }
+    file << "\n";
+
+    // Save current style values
+    file << "[StyleValues]\n";
+    for (const auto& [name, value] : _styleValues) {
+        file << name << "=" << value << "\n";
+    }
+    file << "\n";
+
+    // Save all style presets
+    for (const auto& [presetName, preset] : _stylePresets) {
+        file << "[StylePreset:" << presetName << "]\n";
+        
+        // Save preset colors
+        for (const auto& [name, color] : preset.colors) {
+            file << "color_" << name << "=" << color.r << "," << color.g << "," << color.b << "," << color.a << "\n";
         }
+        
+        // Save preset values
+        for (const auto& [name, value] : preset.values) {
+            file << "value_" << name << "=" << value << "\n";
+        }
+        
         file << "\n";
     }
-    
-    // Save style colors
-    if (!_styleColors.empty()) {
-        file << "[StyleColors]\n";
-        for (const auto& [key, color] : _styleColors) {
-            file << key << "=" << color << "\n";
-        }
-        file << "\n";
+
+    // Save module visibility
+    file << "[Modules]\n";
+    for (const auto& [name, visible] : _moduleVisibility) {
+        file << name << "=" << (visible ? "true" : "false") << "\n";
     }
-    
+
     file.close();
-    LOG_INFO("Successfully saved preferences");
+    LOG_INFO("Saved preferences to: {}", filepath);
     return true;
 }
 
-bool PreferencesManager::loadFromFile(const std::string& filepath) {
-    LOG_INFO("Loading preferences from: {}", filepath);
-    
+bool PreferencesManager::loadFromFile(const std::string& filepath)
+{
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        LOG_WARNING("Preferences file not found: {}", filepath);
+        LOG_WARNING("Preferences file not found: {}. Using defaults.", filepath);
         return false;
     }
-    
+
     std::string line;
     std::string currentSection;
-    
+    StylePreset* currentPreset = nullptr;
+
     while (std::getline(file, line)) {
+        // Trim whitespace
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
         // Skip empty lines and comments
         if (line.empty() || line[0] == '#') {
             continue;
         }
-        
-        // Check for section headers
-        if (line[0] == '[' && line.back() == ']') {
+
+        // Check for section header
+        if (line[0] == '[' && line[line.length() - 1] == ']') {
             currentSection = line.substr(1, line.length() - 2);
+            
+            // Check if this is a style preset section
+            if (currentSection.find("StylePreset:") == 0) {
+                std::string presetName = currentSection.substr(12); // Skip "StylePreset:"
+                _stylePresets[presetName] = StylePreset();
+                _stylePresets[presetName].name = presetName;
+                currentPreset = &_stylePresets[presetName];
+            } else {
+                currentPreset = nullptr;
+            }
             continue;
         }
-        
+
         // Parse key=value pairs
         size_t equalsPos = line.find('=');
         if (equalsPos == std::string::npos) {
             continue;
         }
-        
+
         std::string key = line.substr(0, equalsPos);
         std::string value = line.substr(equalsPos + 1);
-        
+
+        // Trim key and value
+        key.erase(0, key.find_first_not_of(" \t"));
+        key.erase(key.find_last_not_of(" \t") + 1);
+        value.erase(0, value.find_first_not_of(" \t"));
+        value.erase(value.find_last_not_of(" \t") + 1);
+
         // Store based on current section
         if (currentSection == "Theme") {
             if (key == "current") {
-                _theme = value;
+                _currentTheme = value;
             }
         } else if (currentSection == "Shortcuts") {
             _shortcuts[key] = value;
+        } else if (currentSection == "StyleColors") {
+            // Parse color: r,g,b,a
+            std::istringstream ss(value);
+            float r, g, b, a;
+            char comma;
+            if (ss >> r >> comma >> g >> comma >> b >> comma >> a) {
+                _styleColors[key] = glm::vec4(r, g, b, a);
+            }
+        } else if (currentSection == "StyleValues") {
+            _styleValues[key] = std::stof(value);
+        } else if (currentPreset != nullptr) {
+            // Loading a style preset
+            if (key.find("color_") == 0) {
+                std::string colorName = key.substr(6); // Skip "color_"
+                std::istringstream ss(value);
+                float r, g, b, a;
+                char comma;
+                if (ss >> r >> comma >> g >> comma >> b >> comma >> a) {
+                    currentPreset->colors[colorName] = glm::vec4(r, g, b, a);
+                }
+            } else if (key.find("value_") == 0) {
+                std::string valueName = key.substr(6); // Skip "value_"
+                currentPreset->values[valueName] = std::stof(value);
+            }
         } else if (currentSection == "Modules") {
             _moduleVisibility[key] = (value == "true");
-        } else if (currentSection == "StyleValues") {
-            try {
-                _styleValues[key] = std::stof(value);
-            } catch (...) {
-                LOG_WARNING("Invalid style value for {}: {}", key, value);
-            }
-        } else if (currentSection == "StyleColors") {
-            _styleColors[key] = value;
         }
     }
-    
+
     file.close();
-    LOG_INFO("Successfully loaded preferences");
+    LOG_INFO("Loaded preferences from: {}", filepath);
     return true;
 }
 
@@ -176,9 +216,7 @@ float PreferencesManager::getStyleValue(const std::string& key, float defaultVal
 }
 
 void PreferencesManager::setStyleColor(const std::string& key, float r, float g, float b, float a) {
-    std::stringstream ss;
-    ss << r << "," << g << "," << b << "," << a;
-    _styleColors[key] = ss.str();
+    _styleColors[key] = glm::vec4(r, g, b, a);
 }
 
 bool PreferencesManager::getStyleColor(const std::string& key, float& r, float& g, float& b, float& a) const {
@@ -187,30 +225,59 @@ bool PreferencesManager::getStyleColor(const std::string& key, float& r, float& 
         return false;
     }
     
-    std::stringstream ss(it->second);
-    std::string component;
-    
-    if (!std::getline(ss, component, ',')) return false;
-    r = std::stof(component);
-    
-    if (!std::getline(ss, component, ',')) return false;
-    g = std::stof(component);
-    
-    if (!std::getline(ss, component, ',')) return false;
-    b = std::stof(component);
-    
-    if (!std::getline(ss, component, ',')) return false;
-    a = std::stof(component);
+    r = it->second.r;
+    g = it->second.g;
+    b = it->second.b;
+    a = it->second.a;
     
     return true;
 }
 
 void PreferencesManager::setTheme(const std::string& themeName) {
-    _theme = themeName;
+    _currentTheme = themeName;
 }
 
-std::string PreferencesManager::getTheme(const std::string& defaultTheme) const {
-    return _theme.empty() ? defaultTheme : _theme;
+std::string PreferencesManager::getTheme() const {
+    return _currentTheme;
+}
+
+void PreferencesManager::saveCurrentStyleAsPreset(const std::string& presetName) {
+    StylePreset preset;
+    preset.name = presetName;
+    preset.colors = _styleColors;
+    preset.values = _styleValues;
+    
+    _stylePresets[presetName] = preset;
+    LOG_INFO("Saved style preset: {}", presetName);
+}
+
+void PreferencesManager::loadStylePreset(const std::string& presetName) {
+    auto it = _stylePresets.find(presetName);
+    if (it != _stylePresets.end()) {
+        _styleColors = it->second.colors;
+        _styleValues = it->second.values;
+        _currentTheme = presetName;
+        LOG_INFO("Loaded style preset: {}", presetName);
+    } else {
+        LOG_WARNING("Style preset not found: {}", presetName);
+    }
+}
+
+std::vector<std::string> PreferencesManager::getStylePresetNames() const {
+    std::vector<std::string> names;
+    for (const auto& [name, preset] : _stylePresets) {
+        names.push_back(name);
+    }
+    return names;
+}
+
+void PreferencesManager::deleteStylePreset(const std::string& presetName) {
+    _stylePresets.erase(presetName);
+    LOG_INFO("Deleted style preset: {}", presetName);
+}
+
+bool PreferencesManager::hasStylePreset(const std::string& presetName) const {
+    return _stylePresets.find(presetName) != _stylePresets.end();
 }
 
 std::string PreferencesManager::serializeShortcut(int key, KeyModifier mods) const {
