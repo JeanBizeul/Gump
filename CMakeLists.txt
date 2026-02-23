@@ -8,6 +8,7 @@ set(CMAKE_C_STANDARD 17)
 # --- Dependencies ---
 find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
+find_package(libzip REQUIRED)
 
 # On Linux, we need X11 for GLFW/ImGui
 if(UNIX AND NOT APPLE)
@@ -36,6 +37,7 @@ target_link_libraries(gump PRIVATE
     glad
     glfw
     OpenGL::GL
+    libzip::zip
 )
 
 # Add X11 on Linux

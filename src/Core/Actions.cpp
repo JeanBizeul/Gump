@@ -10,9 +10,47 @@
 #include <cstring>
 #include "Utils/Utils.hpp"
 
+// Use libzip for compression
+#include <zip.h>
+
 // Forward declare stb_image_write functions (implementation is in another TU)
 extern "C" {
     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+}
+
+// Helper function to add a file to a zip archive using libzip
+static bool addFileToZip(zip_t* archive, const std::string& filepath, const std::string& archiveName) {
+    // Read file contents
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR("Failed to open file for zipping: {}", filepath);
+        return false;
+    }
+
+    file.seekg(0, std::ios::end);
+    size_t fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+    
+    std::vector<char> buffer(fileSize);
+    file.read(buffer.data(), fileSize);
+    file.close();
+
+    // Create zip source from buffer
+    zip_source_t* source = zip_source_buffer(archive, buffer.data(), fileSize, 0);
+    if (source == nullptr) {
+        LOG_ERROR("Failed to create zip source: {}", zip_strerror(archive));
+        return false;
+    }
+
+    // Add file to archive
+    zip_int64_t index = zip_file_add(archive, archiveName.c_str(), source, ZIP_FL_ENC_UTF_8);
+    if (index < 0) {
+        LOG_ERROR("Failed to add file to zip: {}", zip_strerror(archive));
+        zip_source_free(source);
+        return false;
+    }
+
+    return true;
 }
 
 // Helper function to export a layer as PNG
@@ -89,21 +127,21 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
     // Extract directory name from filepath (remove extension if present)
     fs::path path(filepath);
     std::string dirName = path.stem().string();
-    fs::path saveDir = path.parent_path() / dirName;
+    fs::path saveDir = path.parent_path() / (dirName + "_temp");
     
-    // Create the save directory
+    // Create the temporary save directory
     try {
         if (fs::exists(saveDir)) {
-            LOG_WARNING("Save directory already exists, overwriting: {}", saveDir.string());
+            LOG_WARNING("Temporary save directory already exists, removing: {}", saveDir.string());
             fs::remove_all(saveDir);
         }
         fs::create_directories(saveDir);
     } catch (const fs::filesystem_error& e) {
-        LOG_ERROR("Failed to create save directory: {}", e.what());
+        LOG_ERROR("Failed to create temporary save directory: {}", e.what());
         return false;
     }
 
-    LOG_INFO("Saving project to: {}", saveDir.string());
+    LOG_INFO("Saving project to temporary directory: {}", saveDir.string());
 
     // Create config file
     fs::path configPath = saveDir / "project.cfg";
@@ -123,6 +161,7 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
     configFile << "LayerCount=" << layers.size() << "\n\n";
 
     // Export each layer
+    std::vector<fs::path> layerPaths;
     for (size_t i = 0; i < layers.size(); i++) {
         auto& layer = layers[i];
         
@@ -141,9 +180,12 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
         
         // Export layer as PNG
         fs::path layerPath = saveDir / layerFilename;
+        layerPaths.push_back(layerPath);
+        
         if (!exportLayerAsPNG(app, *layer, layerPath.string())) {
             LOG_ERROR("Failed to export layer {}: {}", i, layer->name);
             configFile.close();
+            fs::remove_all(saveDir);
             return false;
         }
         
@@ -151,11 +193,61 @@ static bool performSave(Gump::Application& app, const std::string& filepath) {
     }
 
     configFile.close();
-    LOG_INFO("Project saved successfully to: {}", saveDir.string());
+    LOG_INFO("Project files created successfully");
+    
+    // Create zip archive using libzip
+    LOG_INFO("Creating zip archive: {}", filepath);
+    
+    int error;
+    zip_t* archive = zip_open(filepath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error);
+    if (archive == nullptr) {
+        zip_error_t zip_error;
+        zip_error_init_with_code(&zip_error, error);
+        LOG_ERROR("Failed to create zip archive: {}", zip_error_strerror(&zip_error));
+        zip_error_fini(&zip_error);
+        fs::remove_all(saveDir);
+        return false;
+    }
+    
+    // Add config file to zip
+    if (!addFileToZip(archive, configPath.string(), "project.cfg")) {
+        zip_close(archive);
+        fs::remove_all(saveDir);
+        return false;
+    }
+    
+    // Add all layer files to zip
+    for (size_t i = 0; i < layerPaths.size(); i++) {
+        std::string archiveName = "layer_" + std::to_string(i) + ".png";
+        if (!addFileToZip(archive, layerPaths[i].string(), archiveName)) {
+            zip_close(archive);
+            fs::remove_all(saveDir);
+            return false;
+        }
+    }
+    
+    // Finalize and close the archive
+    if (zip_close(archive) < 0) {
+        LOG_ERROR("Failed to finalize zip archive: {}", zip_strerror(archive));
+        fs::remove_all(saveDir);
+        return false;
+    }
+    
+    LOG_INFO("Zip archive created successfully");
+    
+    // Delete temporary directory
+    try {
+        fs::remove_all(saveDir);
+        LOG_INFO("Temporary directory cleaned up");
+    } catch (const fs::filesystem_error& e) {
+        LOG_WARNING("Failed to remove temporary directory: {}", e.what());
+        // Don't fail the save operation if cleanup fails
+    }
     
     // Update the current file path
     app.setCurrentFilePath(filepath);
     
+    LOG_INFO("Project saved successfully to: {}", filepath);
     return true;
 }
 
