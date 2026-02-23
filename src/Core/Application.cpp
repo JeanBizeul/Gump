@@ -178,11 +178,14 @@ void Gump::Application::applyStyleSettingsFromPreferences()
     if (_preferencesManager.getStyleColor("Background", r, g, b, a)) {
         style.Colors[ImGuiCol_WindowBg] = ImVec4(r, g, b, a);
         style.Colors[ImGuiCol_ChildBg] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_PopupBg] = ImVec4(r, g, b, a * 0.98f);
+        style.Colors[ImGuiCol_MenuBarBg] = ImVec4(r * 0.95f, g * 0.95f, b * 0.95f, a);
         LOG_DEBUG("Applied background color: {}, {}, {}, {}", r, g, b, a);
     }
     
     if (_preferencesManager.getStyleColor("Text", r, g, b, a)) {
         style.Colors[ImGuiCol_Text] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_TextDisabled] = ImVec4(r * 0.5f, g * 0.5f, b * 0.5f, a);
         LOG_DEBUG("Applied text color: {}, {}, {}, {}", r, g, b, a);
     }
     
@@ -192,8 +195,13 @@ void Gump::Application::applyStyleSettingsFromPreferences()
         style.Colors[ImGuiCol_HeaderActive] = ImVec4(r, g, b, a);
         style.Colors[ImGuiCol_ButtonActive] = ImVec4(r, g, b, a);
         style.Colors[ImGuiCol_TabActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_TabHovered] = ImVec4(r, g, b, a * 0.9f);
         style.Colors[ImGuiCol_SliderGrab] = ImVec4(r, g, b, a);
         style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_CheckMark] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(r * 0.8f, g * 0.8f, b * 0.8f, a);
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(r, g, b, a);
+        style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(r * 0.7f, g * 0.7f, b * 0.7f, a * 0.8f);
         LOG_DEBUG("Applied accent color: {}, {}, {}, {}", r, g, b, a);
     }
     
@@ -203,6 +211,9 @@ void Gump::Application::applyStyleSettingsFromPreferences()
         style.Colors[ImGuiCol_FrameBg] = ImVec4(r, g, b, a);
         style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(r * 0.9f, g * 0.9f, b * 0.9f, a);
         style.Colors[ImGuiCol_FrameBgActive] = ImVec4(r * 0.85f, g * 0.85f, b * 0.85f, a);
+        style.Colors[ImGuiCol_Tab] = ImVec4(r, g, b, a * 0.8f);
+        style.Colors[ImGuiCol_TabUnfocused] = ImVec4(r * 0.9f, g * 0.9f, b * 0.9f, a * 0.7f);
+        style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(r * 0.95f, g * 0.95f, b * 0.95f, a * 0.9f);
         LOG_DEBUG("Applied button color: {}, {}, {}, {}", r, g, b, a);
     }
     
@@ -213,6 +224,9 @@ void Gump::Application::applyStyleSettingsFromPreferences()
         style.ChildRounding = rounding;
         style.FrameRounding = rounding;
         style.GrabRounding = rounding;
+        style.PopupRounding = rounding;
+        style.ScrollbarRounding = rounding;
+        style.TabRounding = rounding;
         LOG_DEBUG("Applied window rounding: {}", rounding);
     }
     

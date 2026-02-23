@@ -33,6 +33,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f); // Thick border
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("move_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         renderMoveTool(app);
         ImGui::EndChild();
@@ -59,6 +67,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("pencil_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         renderPencilTool(app);
         ImGui::EndChild();
@@ -85,6 +101,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("eraser_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         renderEraserTool(app);
         ImGui::EndChild();
@@ -113,6 +137,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("fill_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         ImGui::GetWindowDrawList()->AddRectFilled(
             ImGui::GetCursorScreenPos(),
@@ -143,6 +175,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("selection_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         renderSelectionTool(app);
         ImGui::EndChild();
@@ -171,6 +211,14 @@ void Gump::UI::renderTools(Gump::Application &app) {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 3.0f);
         }
         
+        ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(
+            buttonPos,
+            ImVec2(buttonPos.x + IconSize.x, buttonPos.y + IconSize.y),
+            IM_COL32(0, 0, 0, 255)
+        );
+
         ImGui::BeginChild("fuzzy_select_tool", IconSize, true, ImGuiWindowFlags_NoScrollbar);
         renderFuzzySelectTool(app);
         ImGui::EndChild();
