@@ -5,92 +5,99 @@
 #include "Application.hpp"
 #include "Logger.hpp"
 
-void Gump::UI::renderManualResizeDialog(Gump::Application &app)
-{
-    auto& request = app.getResizeCanvasRequest();
-    
-    if (!request.isRequested) {
+void Gump::UI::renderManualResizeDialog(Gump::Application& app) {
+    auto& resizeRequest = app.getResizeCanvasRequest();
+    if (!resizeRequest.isRequested) {
         return;
     }
+
+    // State for the dialog
+    static int newWidth = 800;
+    static int newHeight = 600;
+    static bool dialogOpen = false;
     
-    // Open popup on first frame when isRequested is set
-    static bool popupOpened = false;
-    if (!popupOpened) {
-        ImGui::OpenPopup("Resize Canvas");
-        popupOpened = true;
-    }
-    
-    // Center the popup
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    
-    if (ImGui::BeginPopupModal("Resize Canvas", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    // Initialize dialog values from current canvas size when first opened
+    if (resizeRequest.isRequested && !dialogOpen) {
         auto currentSize = app.getCanvasSize();
+        newWidth = currentSize.x;
+        newHeight = currentSize.y;
+        dialogOpen = true;
+    }
+
+    // Center the dialog window
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Always);
+
+    bool isOpen = true;
+    if (ImGui::Begin("Canvas Size", &isOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
         
-        // Static variables to hold input values
-        static int newWidth = 800;
-        static int newHeight = 600;
-        
-        // Initialize with current canvas size when dialog opens
-        if (ImGui::IsWindowAppearing()) {
-            newWidth = static_cast<int>(currentSize.x);
-            newHeight = static_cast<int>(currentSize.y);
-        }
-        
-        ImGui::Text("Current canvas size: %ux%u", currentSize.x, currentSize.y);
+        ImGui::Text("Enter the size for your canvas:");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        
+
         // Width input
-        ImGui::Text("New canvas size:");
-        ImGui::PushItemWidth(150);
-        ImGui::InputInt("Width", &newWidth, 1, 100);
-        
+        ImGui::Text("Width:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(200);
+        ImGui::InputInt("##Width", &newWidth);
+        newWidth = glm::clamp(newWidth, 1, 8192);
+
         // Height input
-        ImGui::InputInt("Height", &newHeight, 1, 100);
-        ImGui::PopItemWidth();
-        
-        // Clamp values to reasonable ranges
-        if (newWidth < 1) newWidth = 1;
-        if (newWidth > 8192) newWidth = 8192;
-        if (newHeight < 1) newHeight = 1;
-        if (newHeight > 8192) newHeight = 8192;
-        
+        ImGui::Text("Height:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(200);
+        ImGui::InputInt("##Height", &newHeight);
+        newHeight = glm::clamp(newHeight, 1, 8192);
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        
+
         // Buttons
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            // Apply the new canvas size
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 220) * 0.5f);
+        if (ImGui::Button("Create", ImVec2(100, 0))) {
+            // Set the new canvas size
             app.setCanvasSize(glm::uvec2(newWidth, newHeight));
+            LOG_INFO("Canvas resized to {}x{}", newWidth, newHeight);
             
-            LOG_INFO("Canvas manually resized to {}x{}", newWidth, newHeight);
+            // Create a default layer if there are no layers
+            if (app.getLayerCount() == 0) {
+                app.addEmptyLayer("Layer 1", newWidth, newHeight);
+                LOG_INFO("Created default layer");
+            }
             
-            // Clear request state
-            request.isRequested = false;
-            popupOpened = false;
-            ImGui::CloseCurrentPopup();
+            // Close dialog
+            resizeRequest.isRequested = false;
+            dialogOpen = false;
         }
-        
+
         ImGui::SameLine();
-        
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            LOG_INFO("Canvas resize cancelled by user");
+
+        if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+            // If there are no layers (new file was cancelled), create a default canvas
+            if (app.getLayerCount() == 0) {
+                app.setCanvasSize(glm::uvec2(800, 600));
+                app.addEmptyLayer("Layer 1", 800, 600);
+                LOG_INFO("New file cancelled, created default 800x600 canvas");
+            }
             
-            // Clear request state
-            request.isRequested = false;
-            popupOpened = false;
-            ImGui::CloseCurrentPopup();
+            resizeRequest.isRequested = false;
+            dialogOpen = false;
+        }
+    }
+    ImGui::End();
+    
+    // Handle dialog close button (X)
+    if (!isOpen) {
+        // If there are no layers (new file was cancelled), create a default canvas
+        if (app.getLayerCount() == 0) {
+            app.setCanvasSize(glm::uvec2(800, 600));
+            app.addEmptyLayer("Layer 1", 800, 600);
+            LOG_INFO("New file cancelled via close button, created default 800x600 canvas");
         }
         
-        ImGui::EndPopup();
-    } else {
-        // If popup is closed by other means, reset the flag
-        if (popupOpened) {
-            popupOpened = false;
-            request.isRequested = false;
-        }
+        resizeRequest.isRequested = false;
+        dialogOpen = false;
     }
 }

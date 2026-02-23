@@ -30,7 +30,29 @@ static std::string ensureExtension(const std::string& path, const std::string& e
 
 std::expected<void, std::string> Actions::TopMenu::newFile(Application &app)
 {
-    LOG_DEBUG("Action: New File");
+    LOG_INFO("Creating new file");
+    
+    // Clear all existing layers
+    app.getLayers().clear();
+    LOG_INFO("Cleared all layers");
+    
+    // Reset selection state
+    app.getSelectionState().hasSelection = false;
+    app.getSelectionState().clearMask();
+    app.updateSelectionMesh();
+    
+    // Clear clipboard
+    app.getClipboard().hasData = false;
+    app.getClipboard().pixels.clear();
+    
+    // Reset current file path
+    app.setCurrentFilePath("");
+    
+    // Set flag to show new canvas dialog
+    auto& resizeRequest = app.getResizeCanvasRequest();
+    resizeRequest.isRequested = true;
+    
+    LOG_INFO("New file created, waiting for canvas size input");
     return {};
 }
 
