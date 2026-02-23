@@ -492,83 +492,62 @@ void Gump::UI::renderPreferences(Gump::Application &app) {
                 ImGui::Text("Enable or disable UI elements");
                 ImGui::Spacing();
                 
-                // Checkboxes for each UI module
-                static bool showTools = true;
-                static bool showToolSettings = true;
-                static bool showBrushSettings = true;
-                static bool showLayers = true;
-                static bool showColorSelector = true;
-                static bool showDebugInfo = false;
-                static bool showTopMenu = true;
+                // Load visibility settings from preferences manager directly (no static cache)
+                auto& prefMgr = app.getPreferencesManager();
                 
-                ImGui::Checkbox("Tools Panel", &showTools);
+                bool showTools = prefMgr.isModuleVisible("Tools", true);
+                bool showToolSettings = prefMgr.isModuleVisible("ToolSettings", true);
+                bool showBrushSettings = prefMgr.isModuleVisible("BrushSettings", true);
+                bool showLayers = prefMgr.isModuleVisible("Layers", true);
+                bool showDebugInfo = prefMgr.isModuleVisible("DebugInfo", false);
+                
+                // Checkboxes for each UI module - save immediately on change
+                if (ImGui::Checkbox("Tools Panel", &showTools)) {
+                    prefMgr.setModuleVisible("Tools", showTools);
+                }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Show/hide the tools panel with brush, eraser, selection, etc.");
                 }
                 
-                ImGui::Checkbox("Tool Settings Panel", &showToolSettings);
+                if (ImGui::Checkbox("Tool Settings Panel", &showToolSettings)) {
+                    prefMgr.setModuleVisible("ToolSettings", showToolSettings);
+                }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Show/hide tool-specific settings");
                 }
                 
-                ImGui::Checkbox("Brush Settings Panel", &showBrushSettings);
+                if (ImGui::Checkbox("Brush Settings Panel", &showBrushSettings)) {
+                    prefMgr.setModuleVisible("BrushSettings", showBrushSettings);
+                }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Show/hide brush configuration options");
                 }
                 
-                ImGui::Checkbox("Layers Panel", &showLayers);
+                if (ImGui::Checkbox("Layers Panel", &showLayers)) {
+                    prefMgr.setModuleVisible("Layers", showLayers);
+                }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Show/hide the layers management panel");
                 }
                 
-                ImGui::Checkbox("Color Selector", &showColorSelector);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Show/hide the color picker");
+                if (ImGui::Checkbox("Debug Information", &showDebugInfo)) {
+                    prefMgr.setModuleVisible("DebugInfo", showDebugInfo);
                 }
-                
-                ImGui::Checkbox("Debug Information", &showDebugInfo);
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Show/hide performance and debug info");
-                }
-                
-                ImGui::Checkbox("Top Menu Bar", &showTopMenu);
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Show/hide the main menu bar (File, Edit, View, etc.)");
                 }
                 
                 ImGui::Spacing();
                 ImGui::Separator();
                 ImGui::Spacing();
                 
-                ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.0f, 1.0f), "Note:");
-                ImGui::TextWrapped("Some changes may require restarting the application to take full effect.");
-                
-                ImGui::Spacing();
-                
                 if (ImGui::Button("Reset to Defaults")) {
                     LOG_INFO("Reset module visibility to defaults");
-                    showTools = true;
-                    showToolSettings = true;
-                    showBrushSettings = true;
-                    showLayers = true;
-                    showColorSelector = true;
-                    showDebugInfo = false;
-                    showTopMenu = true;
-                }
-                
-                ImGui::SameLine();
-                if (ImGui::Button("Save Now")) {
-                    // Save module visibility settings
-                    auto& prefMgr = app.getPreferencesManager();
-                    prefMgr.setModuleVisible("Tools", showTools);
-                    prefMgr.setModuleVisible("ToolSettings", showToolSettings);
-                    prefMgr.setModuleVisible("BrushSettings", showBrushSettings);
-                    prefMgr.setModuleVisible("Layers", showLayers);
-                    prefMgr.setModuleVisible("ColorSelector", showColorSelector);
-                    prefMgr.setModuleVisible("DebugInfo", showDebugInfo);
-                    prefMgr.setModuleVisible("TopMenu", showTopMenu);
-                    prefMgr.saveToFile();
-                    LOG_INFO("Preferences saved");
+                    prefMgr.setModuleVisible("Tools", true);
+                    prefMgr.setModuleVisible("ToolSettings", true);
+                    prefMgr.setModuleVisible("BrushSettings", true);
+                    prefMgr.setModuleVisible("Layers", true);
+                    prefMgr.setModuleVisible("DebugInfo", false);
                 }
                 
                 break;

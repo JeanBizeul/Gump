@@ -30,7 +30,7 @@ Gump::Application::Application()
     try {
         // Load preferences BEFORE creating window so ImGui can use them
         LOG_DEBUG("Loading preferences ...");
-        _preferencesManager.loadFromFile();
+        _preferencesManager.loadFromFile("preferences.cfg");
         _preferencesManager.loadShortcuts(_shortcutManager);
         
         LOG_DEBUG("Creating window ...");
@@ -163,8 +163,8 @@ void Gump::Application::closePreferences()
     // Save preferences when closing the preferences window
     LOG_INFO("Closing preferences, saving settings...");
     _preferencesManager.saveShortcuts(_shortcutManager);
-    // Style settings are saved as they change, so they're already in the manager
-    _preferencesManager.saveToFile();
+    // Module visibility and style settings are already saved when changed
+    _preferencesManager.saveToFile("preferences.cfg");
     _preferencesOpen = false;
 }
 

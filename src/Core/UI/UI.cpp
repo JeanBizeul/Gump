@@ -50,7 +50,5 @@ void Gump::renderUI(Gump::Application &app)
     Gump::UI::renderResizeCanvasDialog(app);
     Gump::UI::renderManualResizeDialog(app);
     Gump::UI::renderPreferences(app);
-    LOG_DEBUG("A");
     Gump::UI::renderTutorials(app);
-    LOG_DEBUG("B");
 }

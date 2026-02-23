@@ -18,11 +18,9 @@ enum class TutorialSection {
 };
 
 void Gump::UI::renderTutorials(Gump::Application &app) {
-    LOG_DEBUG("0");
     if (!app.isTutorialsOpen()) {
         return;
     }
-    LOG_DEBUG("A");
 
     ImGui::SetNextWindowSize(ImVec2(1000, 700), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
@@ -32,13 +30,11 @@ void Gump::UI::renderTutorials(Gump::Application &app) {
         ImGui::End();
         return;
     }
-    LOG_DEBUG("B");
     
     // If the close button was clicked, close the window
     if (!tutorialsOpen) {
         app.closeTutorials();
     }
-    LOG_DEBUG("C");
     
     static TutorialSection selectedSection = TutorialSection::GettingStarted;
     static std::string searchQuery = "";
