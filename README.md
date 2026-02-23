@@ -1,3 +1,9 @@
+The full documentation of this project is available online at https://jeanbizeul.github.io/Gump/.
+
+# Resources used
+
+https://www.flaticon.com/free-icons/
+
 # Gump Setup Guide
 
 ## Windows Setup
@@ -13,7 +19,7 @@ During install, select:
 #### 2. CMake (>= 3.16)
 ```powershell
 winget install Kitware.CMake
-````
+```
 
 #### 3. vcpkg
 
@@ -34,7 +40,6 @@ Install GLFW3 via vcpkg:
 C:\Dev\vcpkg\vcpkg install glfw3:x64-windows
 
 # Or you can use the provided dependencies-windows.txt
-
 Get-Content dependencies-windows.txt | ForEach-Object { C:/Dev/vcpkg/vcpkg.exe install $_ }
 ```
 
@@ -47,14 +52,29 @@ cd Gump
 
 ### Build Steps
 
-#### 1. Create a build folder
+> [!TIP]
+> You can use the script provided in scripts/ and do all of the build steps automatically
+> ```powershell
+> # Debug build
+> ./scripts/build-debug-windows.bat
+> # Release build
+> ./scripts/build-release-windows.bat
+> ```
+
+#### 1. Initialize and update git submodules (if not done while cloning the project)
+```powershell
+git submodule init
+git submodule update
+```
+
+#### 2. Create a build folder
 
 ```powershell
 mkdir build
 cd build
 ```
 
-#### 2. Configure with CMake
+#### 3. Configure with CMake
 
 ```powershell
 cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -62,7 +82,7 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/Dev/vcpkg/scripts/buildsystems/vcpkg.cmake
 
 > If vcpkg is installed in a different location, adjust the path accordingly.
 
-#### 3. Build the project
+#### 4. Build the project
 
 ```powershell
 cmake --build . --config Debug
@@ -113,20 +133,35 @@ cd Gump
 
 ### Build Steps
 
-#### 1. Create a build folder
+> [!TIP]
+> You can use the script provided in scripts/ and do all of the build steps automatically
+> ```bash
+> # Debug build
+> ./scripts/build-debug-linux.sh
+> # Release build
+> ./scripts/build-release-linux.sh
+> ```
+
+#### 1. Initialize and update git submodules (if not done while cloning the project)
+```powershell
+git submodule init
+git submodule update
+```
+
+#### 2. Create a build folder
 
 ```bash
 mkdir -p build
 cd build
 ```
 
-#### 2. Configure with CMake
+#### 3. Configure with CMake
 
 ```bash
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 ```
 
-#### 3. Build the project
+#### 4. Build the project
 
 ```bash
 cmake --build .
@@ -140,6 +175,7 @@ The executable will be located in the `build/` directory:
 ./gump
 ```
 
+> [!TIP]
 > Optionally, you can change `CMAKE_BUILD_TYPE` to `Release` for a release build:
 >
 > ```bash

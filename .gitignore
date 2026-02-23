@@ -2,7 +2,10 @@
 .vscode/
 .vs/
 build/
+save/
 
 # Files wildmatches
 
 # Sepcific files
+imgui.ini
+preferences.cfg
