@@ -35,6 +35,42 @@ void Gump::UI::renderLayers(Gump::Application &app) {
     for (size_t i = 0; i < app.getLayerCount(); i++) {
         Layer* layer = &app.getLayer(i);
 
+        ImGui::PushID(static_cast<int>(i));
+
+        // Calculate the size of the layer item first
+        float itemHeight = 80.0f; // Approximate height for the layer item
+        float itemWidth = ImGui::GetContentRegionAvail().x;
+
+        // Create an invisible button that covers the entire layer item for drag-and-drop
+        ImGui::InvisibleButton(("##dragarea" + std::to_string(i)).c_str(), ImVec2(itemWidth, itemHeight));
+        
+        // Drag-and-drop source: make this layer draggable
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            // Set payload to carry the layer index
+            ImGui::SetDragDropPayload("LAYER_REORDER", &i, sizeof(size_t));
+            ImGui::Text("Reordering: %s", layer->name.c_str());
+            ImGui::EndDragDropSource();
+        }
+
+        // Drag-and-drop target: accept drops to reorder
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("LAYER_REORDER")) {
+                size_t draggedIdx = *(const size_t*)payload->Data;
+                if (draggedIdx != i) {
+                    // Swap the layers
+                    std::swap(app.getLayers()[draggedIdx], app.getLayers()[i]);
+                    LOG_INFO("Moved layer from {} to {}", draggedIdx, i);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        // Draw the actual layer content over the invisible button
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() - itemHeight);
+
+        // Start a group for the entire layer item (for drag-and-drop)
+        ImGui::BeginGroup();
+
         // Layer thumbnail preview
         auto texIdOpt = app.getTextureAtlas().getPageTextureID(layer->texturePageIndex);
         if (texIdOpt) {
@@ -217,6 +253,11 @@ void Gump::UI::renderLayers(Gump::Application &app) {
         {
             ImGui::SetTooltip("Transparency");
         }
+
+        ImGui::EndGroup();
+
+        ImGui::PopID();
+        ImGui::Separator();
     }
 
     ImGui::End();
